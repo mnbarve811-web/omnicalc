@@ -4,7 +4,7 @@ const NAV_LINKS = [
   { label: 'Financial', href: '/financial' },
   { label: 'Fitness', href: '/fitness' },
   { label: 'Math', href: '/math' },
-  { label: 'Utils', href: '/utility' },
+  { label: 'Utility', href: '/utility' },
 ] as const
 
 export function Header() {

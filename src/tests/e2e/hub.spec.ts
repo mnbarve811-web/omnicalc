@@ -6,5 +6,12 @@ test('hub page loads and shows four pillar cards', async ({ page }) => {
   await expect(page.locator('text=Financial Calculators')).toBeVisible()
   await expect(page.locator('text=Fitness & Health')).toBeVisible()
   await expect(page.locator('text=Math & Scientific')).toBeVisible()
-  await expect(page.locator('text=Utility')).toBeVisible()
+  await expect(page.locator('[data-slot="card-title"]', { hasText: 'Utility' })).toBeVisible()
+})
+
+test('nav contains Utility link', async ({ page, viewport }) => {
+  // The nav is hidden on mobile (hidden sm:flex); only check on desktop viewports
+  if (viewport && viewport.width < 640) return
+  await page.goto('/')
+  await expect(page.getByRole('navigation').getByText('Utility')).toBeVisible()
 })
