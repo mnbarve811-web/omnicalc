@@ -1,14 +1,17 @@
 'use client'
 
 import { useState } from 'react'
+import { X } from 'lucide-react'
 import { useCalculatorUrl, type Schema } from '@/lib/hooks/use-calculator-url'
 import { calculateDebtPayoff, type DebtItem, type DebtPayoffStrategy } from '@/lib/engine/financial'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { ExportButtons } from '@/components/common/ExportButtons'
+import { Field } from '@/components/common/Field'
+import { CalculatorGrid, InputPanel, ResultPanel } from '@/components/common/CalculatorLayout'
+import { ResultHero, ResultStat, ResultStats } from '@/components/common/Result'
+import { ResultActions } from '@/components/common/ResultActions'
+import { MobileResultBar } from '@/components/common/MobileResultBar'
 
 const SETTINGS_SCHEMA = {
   strategy:            { param: 'strategy', default: 'avalanche' as DebtPayoffStrategy, parse: s => s as DebtPayoffStrategy, serialize: s => s },
@@ -22,6 +25,8 @@ const DEFAULT_DEBTS: DebtItem[] = [
 
 const fmt = (n: number) =>
   new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n)
+
+const AXIS_TICK = { fill: 'var(--muted-foreground)', fontSize: 12 }
 
 export function DebtPayoffCalculator() {
   const [settings, setSettings] = useCalculatorUrl(SETTINGS_SCHEMA)
@@ -49,6 +54,9 @@ export function DebtPayoffCalculator() {
     'Payoff Order': result.payoffOrder.join(' -> '),
   }))
 
+  const monthsToDebtFree = selected.paidOff ? String(selected.monthsToDebtFree) : 'Never'
+  const strategyName = settings.strategy === 'snowball' ? 'Snowball' : 'Avalanche'
+
   function updateDebt(i: number, field: keyof DebtItem, value: string | number) {
     // Inputs hand back strings; numeric fields must be converted or the engine's `+=` concatenates text
     setDebts(prev => prev.map((d, idx) => idx === i ? { ...d, [field]: field === 'name' ? value : Number(value) } : d))
@@ -63,118 +71,104 @@ export function DebtPayoffCalculator() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Debt list */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Your Debts</CardTitle>
-          <Button variant="outline" size="sm" onClick={addDebt}>+ Add Debt</Button>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Balance ($)</TableHead>
-                <TableHead>Rate (%)</TableHead>
-                <TableHead>Min. Payment ($)</TableHead>
-                <TableHead></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {debts.map((debt, i) => (
-                <TableRow key={i}>
-                  <TableCell><Input value={debt.name} onChange={e => updateDebt(i, 'name', e.target.value)} className="h-8" /></TableCell>
-                  <TableCell><Input type="number" value={debt.balance} onChange={e => updateDebt(i, 'balance', e.target.value)} className="h-8" /></TableCell>
-                  <TableCell><Input type="number" value={debt.interestRate} onChange={e => updateDebt(i, 'interestRate', e.target.value)} className="h-8" /></TableCell>
-                  <TableCell><Input type="number" value={debt.minimumPayment} onChange={e => updateDebt(i, 'minimumPayment', e.target.value)} className="h-8" /></TableCell>
-                  <TableCell><Button variant="ghost" size="sm" onClick={() => removeDebt(i)} className="text-red-500">x</Button></TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+    <CalculatorGrid>
+      <InputPanel title="Your Debts">
+        <div className="space-y-3">
+          {debts.map((debt, i) => (
+            <fieldset key={i} className="space-y-3 rounded-md border border-border p-3">
+              <legend className="sr-only">{`Debt ${i + 1}`}</legend>
+              <div className="flex items-end gap-2">
+                <Field label="Name" className="min-w-0 flex-1" value={debt.name} onChange={e => updateDebt(i, 'name', e.target.value)} />
+                <Button type="button" variant="ghost" size="icon" aria-label={`Remove ${debt.name}`} onClick={() => removeDebt(i)}>
+                  <X aria-hidden />
+                </Button>
+              </div>
+              <div className="grid grid-cols-3 items-end gap-2">
+                <Field label="Balance ($)" type="number" value={debt.balance} onChange={e => updateDebt(i, 'balance', e.target.value)} />
+                <Field label="Rate (%)" type="number" value={debt.interestRate} onChange={e => updateDebt(i, 'interestRate', e.target.value)} />
+                <Field label="Min. Payment ($)" type="number" value={debt.minimumPayment} onChange={e => updateDebt(i, 'minimumPayment', e.target.value)} />
+              </div>
+            </fieldset>
+          ))}
+          <Button type="button" variant="outline" size="sm" className="w-full" onClick={addDebt}>+ Add Debt</Button>
+        </div>
 
-      {/* Settings */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Card>
-          <CardHeader><CardTitle>Strategy</CardTitle></CardHeader>
-          <CardContent>
-            <div className="flex gap-3">
-              {(['avalanche', 'snowball'] as DebtPayoffStrategy[]).map(s => (
-                <button
-                  key={s}
-                  onClick={() => setSettings({ strategy: s })}
-                  className={`flex-1 py-2 px-4 rounded-md border text-sm font-medium transition-colors ${
-                    settings.strategy === s ? 'bg-primary text-primary-foreground' : 'bg-background hover:bg-muted'
-                  }`}
-                >
-                  {s.charAt(0).toUpperCase() + s.slice(1)}
-                </button>
-              ))}
-            </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              {settings.strategy === 'avalanche' ? 'Pay highest interest first — minimizes total interest paid.' : 'Pay smallest balance first — builds momentum with quick wins.'}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader><CardTitle>Extra Monthly Payment</CardTitle></CardHeader>
-          <CardContent>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
-              <Input
-                type="number"
-                value={settings.extraMonthlyPayment}
-                onChange={e => setSettings({ extraMonthlyPayment: Number(e.target.value) })}
-                className="pl-7"
-              />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+        <fieldset>
+          <legend className="mb-1.5 block text-sm font-medium text-foreground">Strategy</legend>
+          <div className="flex gap-2">
+            {(['avalanche', 'snowball'] as DebtPayoffStrategy[]).map(s => (
+              <button
+                key={s}
+                type="button"
+                aria-pressed={settings.strategy === s}
+                onClick={() => setSettings({ strategy: s })}
+                className={`h-11 flex-1 rounded-sm border px-4 text-sm font-medium transition-colors md:h-10 ${
+                  settings.strategy === s ? 'border-primary bg-primary text-primary-foreground' : 'border-input bg-card hover:bg-muted'
+                }`}
+              >
+                {s.charAt(0).toUpperCase() + s.slice(1)}
+              </button>
+            ))}
+          </div>
+          <p className="mt-1.5 text-xs text-muted-foreground">
+            {settings.strategy === 'avalanche' ? 'Pay highest interest first — minimizes total interest paid.' : 'Pay smallest balance first — builds momentum with quick wins.'}
+          </p>
+        </fieldset>
 
-      {/* Results */}
-      <div id="debt-payoff-results" className="space-y-6">
-        <ExportButtons
-          resultsId="debt-payoff-results"
-          filename="debt-payoff-strategy-comparison"
-          csvRows={csvRows}
-          disabled={!canExport}
+        <Field
+          label="Extra Monthly Payment"
+          prefix="$"
+          type="number"
+          value={settings.extraMonthlyPayment}
+          onChange={e => setSettings({ extraMonthlyPayment: Number(e.target.value) })}
         />
+      </InputPanel>
 
+      <ResultPanel id="debt-payoff-results">
         {!selected.paidOff && (
           <p className="text-sm font-medium text-destructive" role="alert">
             These payments never pay the debt off: the interest grows faster than the monthly budget. Raise a minimum or the extra payment.
           </p>
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Card><CardHeader><CardTitle className="text-sm font-medium text-muted-foreground">Months to Debt-Free</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold">{selected.paidOff ? selected.monthsToDebtFree : 'Never'}</p></CardContent></Card>
-          <Card><CardHeader><CardTitle className="text-sm font-medium text-muted-foreground">Total Interest Paid</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold">{fmt(selected.totalInterestPaid)}</p></CardContent></Card>
-          <Card><CardHeader><CardTitle className="text-sm font-medium text-muted-foreground">Payoff Order</CardTitle></CardHeader><CardContent><p className="text-sm">{selected.payoffOrder.join(' -> ')}</p></CardContent></Card>
-        </div>
+        <ResultHero label="Months to Debt-Free" value={monthsToDebtFree} caption={`Using the ${strategyName} strategy`} />
 
-        {/* Comparison chart */}
+        <ResultStats>
+          <ResultStat label="Total Interest Paid" value={fmt(selected.totalInterestPaid)} />
+          <ResultStat label="Payoff Order" value={selected.payoffOrder.join(' -> ')} />
+        </ResultStats>
+
+        <ResultActions
+          resultsId="debt-payoff-results"
+          filename="debt-payoff-strategy-comparison"
+          csvRows={csvRows}
+          canExport={canExport}
+        />
+
         <Card>
           <CardHeader><CardTitle>Strategy Comparison</CardTitle></CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={comparisonData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis yAxisId="left" tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
-                <YAxis yAxisId="right" orientation="right" />
-                <Tooltip formatter={(v: number, name: string) => name === 'interest' ? fmt(v) : `${v} months`} />
-                <Legend />
-                <Bar yAxisId="left" dataKey="interest" name="Total Interest" fill="#ef4444" />
-                <Bar yAxisId="right" dataKey="months" name="Months" fill="#6366f1" />
+              <BarChart data={comparisonData} margin={{ top: 4, right: 0, left: 0, bottom: 4 }}>
+                <CartesianGrid stroke="var(--border)" vertical={false} />
+                <XAxis dataKey="name" tick={AXIS_TICK} tickLine={false} axisLine={false} />
+                <YAxis yAxisId="left" tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} tick={AXIS_TICK} tickLine={false} axisLine={false} />
+                <YAxis yAxisId="right" orientation="right" tick={AXIS_TICK} tickLine={false} axisLine={false} />
+                <Tooltip
+                  formatter={(v: number, name: string) => name === 'interest' ? fmt(v) : `${v} months`}
+                  cursor={{ fill: 'var(--muted)' }}
+                  contentStyle={{ borderRadius: 8, border: '1px solid var(--border)', fontSize: 13 }}
+                />
+                <Legend wrapperStyle={{ fontSize: 13 }} />
+                <Bar yAxisId="left" dataKey="interest" name="Total Interest" fill="var(--chart-2)" radius={[4, 4, 0, 0]} />
+                <Bar yAxisId="right" dataKey="months" name="Months" fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
-      </div>
-    </div>
+      </ResultPanel>
+
+      <MobileResultBar targetId="debt-payoff-results" value={monthsToDebtFree} caption={selected.paidOff ? 'months' : 'debt-free'} />
+    </CalculatorGrid>
   )
 }

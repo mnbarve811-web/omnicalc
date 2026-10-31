@@ -393,11 +393,8 @@ test.describe('Financial calculators', () => {
   })
 
   test.describe('debt payoff', () => {
-    const debtRows = (page: Page) => page.getByRole('table').first().locator('tbody').getByRole('row')
-    const extraInput = (page: Page) => page
-      .locator('[data-slot="card"]')
-      .filter({ has: page.locator('[data-slot="card-title"]').getByText('Extra Monthly Payment', { exact: true }) })
-      .locator('input')
+    const debtRows = (page: Page) => page.getByRole('group', { name: /^Debt \d+$/ })
+    const extraInput = (page: Page) => field(page, 'Extra Monthly Payment')
 
     test('renders heading, results, guide, FAQ and structured data', async ({ page }) => {
       await page.goto('/financial/debt-payoff')
