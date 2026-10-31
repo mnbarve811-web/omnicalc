@@ -4,6 +4,7 @@ import { useCalculatorUrl, type Schema } from '@/lib/hooks/use-calculator-url'
 import { calculateScientific, type AngleMode, type ScientificInputs } from '@/lib/engine/math'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { ExportButtons } from '@/components/common/ExportButtons'
 
 const ANGLE_MODES: { value: AngleMode; label: string }[] = [
   { value: 'deg', label: 'Degrees' },
@@ -60,6 +61,7 @@ export function ScientificCalculator() {
     SCHEMA as Schema<ScientificInputs & Record<string, unknown>>
   )
   const result = calculateScientific(values)
+  const canExport = values.expression.trim() !== '' && result.value !== null && result.error === null
 
   function commitResult() {
     if (result.value !== null) setValues({ expression: result.display })
@@ -128,6 +130,17 @@ export function ScientificCalculator() {
       </Card>
 
       <div className="space-y-6">
+        <div id="scientific-results" className="space-y-6">
+        <ExportButtons
+          resultsId="scientific-results"
+          filename="scientific-calculation"
+          csvRows={[{
+            Expression: values.expression,
+            'Angle mode': values.angleMode === 'deg' ? 'Degrees' : 'Radians',
+            Result: result.display,
+          }]}
+          disabled={!canExport}
+        />
         <Card>
           <CardHeader><CardTitle>Result</CardTitle></CardHeader>
           <CardContent>
@@ -141,6 +154,7 @@ export function ScientificCalculator() {
             </p>
           </CardContent>
         </Card>
+        </div>
 
         <Card>
           <CardHeader><CardTitle>Supported Functions</CardTitle></CardHeader>

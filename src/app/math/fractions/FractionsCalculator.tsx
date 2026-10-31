@@ -4,6 +4,7 @@ import { useCalculatorUrl, type Schema } from '@/lib/hooks/use-calculator-url'
 import { calculateFraction, type FractionInputs, type FractionOperation } from '@/lib/engine/math'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { ExportButtons } from '@/components/common/ExportButtons'
 
 const OPERATIONS: { op: FractionOperation; label: string; symbol: string }[] = [
   { op: 'add',      label: 'Add',      symbol: '+' },
@@ -68,6 +69,11 @@ export function FractionsCalculator() {
 
   const result = calculateFraction(values)
   const activeSymbol = OPERATIONS.find(o => o.op === values.operation)?.symbol ?? '+'
+  const activeLabel = OPERATIONS.find(o => o.op === values.operation)?.label ?? values.operation
+  const canExport = values.denominator1 !== 0 && values.denominator2 !== 0
+    && (values.operation !== 'divide' || values.numerator2 !== 0)
+    && Number.isFinite(result.decimal)
+  const decimalDisplay = Number.isFinite(result.decimal) ? result.decimal.toFixed(4).replace(/\.?0+$/, '') : '—'
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-8">
@@ -115,7 +121,20 @@ export function FractionsCalculator() {
         </CardContent>
       </Card>
 
-      <div className="space-y-4">
+      <div id="fractions-results" className="space-y-4">
+        <ExportButtons
+          resultsId="fractions-results"
+          filename="fraction-calculation"
+          csvRows={[{
+            'First fraction': `${values.numerator1}/${values.denominator1}`,
+            Operation: activeLabel,
+            'Second fraction': `${values.numerator2}/${values.denominator2}`,
+            Result: `${result.numerator}/${result.denominator}`,
+            'Mixed number': result.mixed,
+            Decimal: decimalDisplay,
+          }]}
+          disabled={!canExport}
+        />
         <Card>
           <CardHeader><CardTitle>Result</CardTitle></CardHeader>
           <CardContent className="space-y-6">

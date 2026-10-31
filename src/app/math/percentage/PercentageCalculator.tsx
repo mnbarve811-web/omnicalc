@@ -4,6 +4,7 @@ import { useCalculatorUrl, type Schema } from '@/lib/hooks/use-calculator-url'
 import { calculatePercentage, type PercentageInputs, type PercentageMode } from '@/lib/engine/math'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { ExportButtons } from '@/components/common/ExportButtons'
 
 const MODES: { value: PercentageMode; label: string }[] = [
   { value: 'whatIsXPercentOfY', label: 'X% of Y' },
@@ -42,6 +43,8 @@ export function PercentageCalculator() {
   )
   const result = calculatePercentage(values)
   const inputLabels = getInputLabels(values.mode)
+  const canExport = Number.isFinite(values.x) && Number.isFinite(values.y) && (values.mode === 'whatIsXPercentOfY' || values.y !== 0)
+  const modeLabel = MODES.find(m => m.value === values.mode)?.label ?? values.mode
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-8">
@@ -88,13 +91,27 @@ export function PercentageCalculator() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader><CardTitle>Result</CardTitle></CardHeader>
-        <CardContent>
-          <p className="text-5xl font-bold tabular-nums">{formatResult(values.mode, result.result)}</p>
-          <p className="text-muted-foreground mt-3 text-lg">{result.label}</p>
-        </CardContent>
-      </Card>
+      <div id="percentage-results" className="space-y-6">
+        <ExportButtons
+          resultsId="percentage-results"
+          filename="percentage-calculation"
+          csvRows={[{
+            Mode: modeLabel,
+            [inputLabels.x]: values.x,
+            [inputLabels.y]: values.y,
+            Result: formatResult(values.mode, result.result),
+            Summary: result.label,
+          }]}
+          disabled={!canExport}
+        />
+        <Card>
+          <CardHeader><CardTitle>Result</CardTitle></CardHeader>
+          <CardContent>
+            <p className="text-5xl font-bold tabular-nums">{formatResult(values.mode, result.result)}</p>
+            <p className="text-muted-foreground mt-3 text-lg">{result.label}</p>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }
