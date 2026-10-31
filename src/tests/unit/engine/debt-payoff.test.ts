@@ -58,7 +58,7 @@ describe('calculateDebtPayoff', () => {
 describe('calculateDebtPayoff edge cases', () => {
   it('no debts are paid off in zero months', () => {
     const r = calculateDebtPayoff({ debts: [], strategy: 'avalanche', extraMonthlyPayment: 100 })
-    expect(r).toEqual({ monthsToDebtFree: 0, totalInterestPaid: 0, payoffOrder: [] })
+    expect(r).toEqual({ monthsToDebtFree: 0, totalInterestPaid: 0, payoffOrder: [], paidOff: true })
   })
 
   it('a zero-interest debt takes balance / payment months and no interest', () => {
@@ -82,8 +82,7 @@ describe('calculateDebtPayoff edge cases', () => {
     expect(r.payoffOrder).toEqual(['A', 'B'])
   })
 
-  // Bug: budget left over in the month a debt is cleared is discarded instead of going to the next debt
-  it.todo('budget left over after clearing a debt is applied to the next debt that month', () => {
+  it('budget left over after clearing a debt is applied to the next debt that month', () => {
     const debts = [
       { name: 'A', balance: 500, interestRate: 0, minimumPayment: 100 },
       { name: 'B', balance: 500, interestRate: 0, minimumPayment: 100 },
@@ -122,11 +121,26 @@ describe('calculateDebtPayoff edge cases', () => {
     expect(r.payoffOrder).toEqual([])
   })
 
-  // Bug: the target debt is matched by name, so two debts sharing a name both receive the full monthly budget
-  it.todo('debts with duplicate names are paid off as separate debts', () => {
+  it('debts with duplicate names are paid off as separate debts', () => {
     const debt = { name: 'Card', balance: 5000, interestRate: 10, minimumPayment: 100 }
     const duplicate = calculateDebtPayoff({ debts: [debt, { ...debt }], strategy: 'avalanche', extraMonthlyPayment: 0 })
     const distinct = calculateDebtPayoff({ debts: [debt, { ...debt, name: 'Card 2' }], strategy: 'avalanche', extraMonthlyPayment: 0 })
     expect(duplicate.monthsToDebtFree).toBe(distinct.monthsToDebtFree)
+  })
+  it('reports debts that are never paid off when payments do not cover interest', () => {
+    const r = calculateDebtPayoff({
+      debts: [{ name: 'Card', balance: 10000, interestRate: 30, minimumPayment: 100 }],
+      strategy: 'avalanche',
+      extraMonthlyPayment: 0,
+    })
+    expect(r.paidOff).toBe(false)
+  })
+  it('reports paid off when every debt is cleared', () => {
+    const r = calculateDebtPayoff({
+      debts: [{ name: 'Card', balance: 1000, interestRate: 10, minimumPayment: 100 }],
+      strategy: 'avalanche',
+      extraMonthlyPayment: 0,
+    })
+    expect(r.paidOff).toBe(true)
   })
 })

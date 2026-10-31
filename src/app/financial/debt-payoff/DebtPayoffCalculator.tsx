@@ -36,7 +36,7 @@ export function DebtPayoffCalculator() {
     { name: 'Avalanche', months: avalanche.monthsToDebtFree, interest: avalanche.totalInterestPaid },
   ]
 
-  const canExport = debts.length > 0 && debts.every(d => d.balance > 0 && d.minimumPayment > 0)
+  const canExport = debts.length > 0 && debts.every(d => d.balance > 0 && d.minimumPayment > 0) && selected.paidOff
 
   const csvRows = [
     { strategy: 'Snowball', result: snowball },
@@ -144,8 +144,14 @@ export function DebtPayoffCalculator() {
           disabled={!canExport}
         />
 
+        {!selected.paidOff && (
+          <p className="text-sm font-medium text-destructive" role="alert">
+            These payments never pay the debt off: the interest grows faster than the monthly budget. Raise a minimum or the extra payment.
+          </p>
+        )}
+
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Card><CardHeader><CardTitle className="text-sm font-medium text-muted-foreground">Months to Debt-Free</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold">{selected.monthsToDebtFree}</p></CardContent></Card>
+          <Card><CardHeader><CardTitle className="text-sm font-medium text-muted-foreground">Months to Debt-Free</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold">{selected.paidOff ? selected.monthsToDebtFree : 'Never'}</p></CardContent></Card>
           <Card><CardHeader><CardTitle className="text-sm font-medium text-muted-foreground">Total Interest Paid</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold">{fmt(selected.totalInterestPaid)}</p></CardContent></Card>
           <Card><CardHeader><CardTitle className="text-sm font-medium text-muted-foreground">Payoff Order</CardTitle></CardHeader><CardContent><p className="text-sm">{selected.payoffOrder.join(' -> ')}</p></CardContent></Card>
         </div>

@@ -92,6 +92,12 @@ describe('calculateMortgage edge cases', () => {
     expect(r).toEqual({ monthlyPrincipalAndInterest: 0, monthlyTotal: 0, totalPaymentCount: 0, totalInterestPaid: 0, amortizationSchedule: [] })
   })
 
+  it('a negative term is treated like a zero term instead of giving a negative payment', () => {
+    const r = calculateMortgage({ ...BASE, loanTermYears: -5 })
+    expect(r.monthlyPrincipalAndInterest).toBe(0)
+    expect(r.amortizationSchedule).toEqual([])
+  })
+
   it('a down payment above the price is clamped to a zero loan, leaving only escrow costs', () => {
     const r = calculateMortgage({ ...BASE, downPayment: 350000, propertyTax: 300, homeInsurance: 120, hoa: 50 })
     expect(r.monthlyPrincipalAndInterest).toBe(0)

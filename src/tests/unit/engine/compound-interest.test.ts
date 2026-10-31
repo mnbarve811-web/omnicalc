@@ -52,9 +52,14 @@ describe('calculateCompoundInterest', () => {
 })
 
 describe('calculateCompoundInterest edge cases', () => {
-  it('a zero-year period returns zeros and an empty breakdown', () => {
+  it('a zero-year period leaves the initial investment untouched', () => {
     const r = calculateCompoundInterest({ ...BASE, years: 0 })
-    expect(r).toEqual({ futureValue: 0, totalContributions: 0, totalInterestEarned: 0, yearlyBreakdown: [] })
+    expect(r).toEqual({
+      futureValue: BASE.initialInvestment,
+      totalContributions: BASE.initialInvestment,
+      totalInterestEarned: 0,
+      yearlyBreakdown: [],
+    })
   })
 
   it('annual compounding grows a lump sum by exactly the annual rate each year', () => {

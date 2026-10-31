@@ -33,7 +33,7 @@ export function calculateMortgage(inputs: MortgageInputs): MortgageResult {
   const monthlyRate = interestRate / 100 / 12
   const n = loanTermYears * 12
 
-  if (n === 0) {
+  if (n <= 0) {
     return { monthlyPrincipalAndInterest: 0, monthlyTotal: 0, totalPaymentCount: 0, totalInterestPaid: 0, amortizationSchedule: [] }
   }
 
@@ -81,6 +81,8 @@ export function calculateAutoLoan(inputs: AutoLoanInputs): AutoLoanResult {
   const monthlyRate = interestRate / 100 / 12
   const n = loanTermMonths
 
+  if (n <= 0) return { monthlyPayment: 0, loanBalance, totalInterestPaid: 0, amortizationSchedule: [] }
+
   const monthlyPayment = monthlyRate === 0
     ? loanBalance / n
     : loanBalance * (monthlyRate * Math.pow(1 + monthlyRate, n)) / (Math.pow(1 + monthlyRate, n) - 1)
@@ -126,7 +128,9 @@ export interface CompoundInterestResult {
 export function calculateCompoundInterest(inputs: CompoundInterestInputs): CompoundInterestResult {
   const { initialInvestment, monthlyContribution, annualInterestRate, compoundFrequency, years } = inputs
 
-  if (years === 0) return { futureValue: 0, totalContributions: 0, totalInterestEarned: 0, yearlyBreakdown: [] }
+  if (years <= 0) {
+    return { futureValue: initialInvestment, totalContributions: initialInvestment, totalInterestEarned: 0, yearlyBreakdown: [] }
+  }
 
   const monthlyRate = compoundFrequency > 0 && annualInterestRate > 0
     ? Math.pow(1 + (annualInterestRate / 100) / compoundFrequency, compoundFrequency / 12) - 1
@@ -292,6 +296,7 @@ export interface DebtPayoffResult {
   monthsToDebtFree: number
   totalInterestPaid: number
   payoffOrder: string[]   // debt names in order paid off
+  paidOff: boolean        // false when the 1200-month cap is hit because payments never cover the interest
 }
 
 export function calculateDebtPayoff(inputs: DebtPayoffInputs): DebtPayoffResult {
@@ -306,41 +311,39 @@ export function calculateDebtPayoff(inputs: DebtPayoffInputs): DebtPayoffResult 
   const MAX_MONTHS = 1200 // safety cap
 
   // Total monthly budget is fixed: all minimums + extra.
-  // The target debt receives the full budget each month;
-  // non-target debts only accrue interest (no payment) until they become the target.
+  // The budget goes to debts in strategy order, so the target gets it all and anything left after
+  // clearing the target rolls to the next debt that month; other debts only accrue interest.
   const totalBudget = inputs.debts.reduce((sum, d) => sum + d.minimumPayment, 0) + extraMonthlyPayment
 
   while (debts.length > 0 && month < MAX_MONTHS) {
     month++
 
-    // Sort by strategy to determine which debt is the current target
-    const sorted = [...debts].sort((a, b) =>
+    // Debts are compared by object, not name, so two debts sharing a name stay separate
+    const ordered = [...debts].sort((a, b) =>
       strategy === 'snowball'
         ? a.balance - b.balance
         : b.interestRate - a.interestRate
     )
-    const targetName = sorted[0].name
 
-    // Apply interest to all debts; apply full budget only to the target
-    const newDebts: typeof debts = []
     for (const debt of debts) {
       const interest = debt.balance * (debt.interestRate / 100 / 12)
       totalInterestPaid += interest
       debt.balance += interest
-
-      if (debt.name === targetName) {
-        const payment = Math.min(totalBudget, debt.balance)
-        debt.balance -= payment
-      }
-
-      if (debt.balance <= 0.01) {
-        payoffOrder.push(debt.name)
-      } else {
-        newDebts.push(debt)
-      }
     }
-    debts = newDebts
+
+    let remaining = totalBudget
+    for (const debt of ordered) {
+      if (remaining <= 0) break
+      const payment = Math.min(remaining, debt.balance)
+      debt.balance -= payment
+      remaining -= payment
+    }
+
+    for (const debt of ordered) {
+      if (debt.balance <= 0.01) payoffOrder.push(debt.name)
+    }
+    debts = debts.filter(debt => debt.balance > 0.01)
   }
 
-  return { monthsToDebtFree: month, totalInterestPaid, payoffOrder }
+  return { monthsToDebtFree: month, totalInterestPaid, payoffOrder, paidOff: debts.length === 0 }
 }

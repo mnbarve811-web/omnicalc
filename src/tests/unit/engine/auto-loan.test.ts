@@ -86,9 +86,13 @@ describe('calculateAutoLoan edge cases', () => {
     expect(long.totalInterestPaid).toBeGreaterThan(short.totalInterestPaid)
   })
 
-  // Bug: no zero-term guard (calculateMortgage has one), so the payment is Infinity and the UI shows "$∞"
-  it.todo('a zero-month term returns a finite payment', () => {
+  it('a zero-month term returns a finite payment', () => {
     const r = calculateAutoLoan({ ...BASE, loanTermMonths: 0 })
     expect(Number.isFinite(r.monthlyPayment)).toBe(true)
+  })
+  it('a negative term is treated like a zero term', () => {
+    const r = calculateAutoLoan({ ...BASE, loanTermMonths: -12 })
+    expect(r.monthlyPayment).toBe(0)
+    expect(r.amortizationSchedule).toEqual([])
   })
 })
