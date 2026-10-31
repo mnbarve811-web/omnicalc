@@ -84,6 +84,9 @@ describe('calculateBodyFat', () => {
     expect(r.bodyFatPercentage).toBe(0)
     expect(r.category).toBe('Essential')
   })
-  // Bug: category uses the unrounded value, so 5.95% displays as 6.0% but is labelled Essential (< 6%)
-  it.todo('male waist 72.85 cm rounds to 6.0% and should be categorised Athletes')
+  it('categorises the percentage as displayed to one decimal', () => {
+    const r = calculateBodyFat({ ...MALE, waistCm: 72.85 })
+    expect(r.bodyFatPercentage).toBe(6)
+    expect(r.category).toBe('Athletes')
+  })
 })

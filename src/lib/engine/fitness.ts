@@ -103,19 +103,21 @@ export function calculateBodyFat(inputs: BodyFatInputs): BodyFatResult {
   bf = Math.max(0, bf)
   const bodyFatPercentage = Math.round(bf * 10) / 10
 
+  // Classify the one-decimal figure the page shows, so 5.95% (shown as 6.0%) is not labelled Essential
+  const shown = bodyFatPercentage
   let category: string
   if (gender === 'male') {
-    if (bf < 6)       category = 'Essential'
-    else if (bf < 14) category = 'Athletes'
-    else if (bf < 18) category = 'Fitness'
-    else if (bf < 25) category = 'Acceptable'
-    else              category = 'Obese'
+    if (shown < 6)       category = 'Essential'
+    else if (shown < 14) category = 'Athletes'
+    else if (shown < 18) category = 'Fitness'
+    else if (shown < 25) category = 'Acceptable'
+    else                 category = 'Obese'
   } else {
-    if (bf < 14)      category = 'Essential'
-    else if (bf < 21) category = 'Athletes'
-    else if (bf < 25) category = 'Fitness'
-    else if (bf < 32) category = 'Acceptable'
-    else              category = 'Obese'
+    if (shown < 14)      category = 'Essential'
+    else if (shown < 21) category = 'Athletes'
+    else if (shown < 25) category = 'Fitness'
+    else if (shown < 32) category = 'Acceptable'
+    else                 category = 'Obese'
   }
 
   return { bodyFatPercentage, fatMassKg: 0, leanMassKg: 0, category }
