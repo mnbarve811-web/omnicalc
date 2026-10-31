@@ -102,6 +102,43 @@ export interface GeometryResult {
   surfaceArea?: number
 }
 
-export function calculateGeometry(_inputs: GeometryInputs): GeometryResult {
-  throw new Error('Not implemented')
+export function calculateGeometry({ shape, dimensions }: GeometryInputs): GeometryResult {
+  const { radius = 0, width = 0, height = 0, base = 0, a, b, c } = dimensions
+
+  switch (shape) {
+    case 'circle':
+      return {
+        area: Math.PI * radius * radius,
+        perimeter: 2 * Math.PI * radius,
+      }
+    case 'rectangle':
+      return {
+        area: width * height,
+        perimeter: 2 * (width + height),
+      }
+    case 'triangle': {
+      const perimeter = (a !== undefined && b !== undefined && c !== undefined) ? a + b + c : undefined
+      return {
+        area: 0.5 * base * height,
+        ...(perimeter !== undefined ? { perimeter } : {}),
+      }
+    }
+    case 'cylinder':
+      return {
+        volume: Math.PI * radius * radius * height,
+        surfaceArea: 2 * Math.PI * radius * height + 2 * Math.PI * radius * radius,
+      }
+    case 'sphere':
+      return {
+        volume: (4 / 3) * Math.PI * radius * radius * radius,
+        surfaceArea: 4 * Math.PI * radius * radius,
+      }
+    case 'cone': {
+      const slant = Math.sqrt(radius * radius + height * height)
+      return {
+        volume: (1 / 3) * Math.PI * radius * radius * height,
+        surfaceArea: Math.PI * radius * (radius + slant),
+      }
+    }
+  }
 }
