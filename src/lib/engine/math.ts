@@ -75,6 +75,27 @@ export interface QuadraticResult {
   rootsDisplay: string   // human-readable: "No real roots", "x = 2", "x = 1, x = -3"
 }
 
-export function calculateQuadratic(_inputs: QuadraticInputs): QuadraticResult {
-  throw new Error('Not implemented')
+function formatQuadraticRoot(n: number): string {
+  return Number(n.toPrecision(6)).toString()
+}
+
+export function calculateQuadratic({ a, b, c }: QuadraticInputs): QuadraticResult {
+  const discriminant = b * b - 4 * a * c
+
+  if (a === 0) {
+    return { discriminant, roots: [], rootsDisplay: 'Not a quadratic equation (a = 0)' }
+  }
+
+  if (discriminant < 0) {
+    return { discriminant, roots: [], rootsDisplay: 'No real roots' }
+  }
+
+  if (discriminant === 0) {
+    const x = -b / (2 * a)
+    return { discriminant, roots: [x], rootsDisplay: `x = ${formatQuadraticRoot(x)}` }
+  }
+
+  const x1 = (-b + Math.sqrt(discriminant)) / (2 * a)
+  const x2 = (-b - Math.sqrt(discriminant)) / (2 * a)
+  return { discriminant, roots: [x1, x2], rootsDisplay: `x₁ = ${formatQuadraticRoot(x1)}, x₂ = ${formatQuadraticRoot(x2)}` }
 }
