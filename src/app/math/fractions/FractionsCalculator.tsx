@@ -138,6 +138,13 @@ export function FractionsCalculator() {
         <Card>
           <CardHeader><CardTitle>Result</CardTitle></CardHeader>
           <CardContent className="space-y-6">
+            {/* The engine returns 0/1 as a safe value here, which would read as a real answer */}
+            {!canExport ? (
+              <p className="text-lg font-medium text-destructive text-center" role="status">
+                Undefined: a denominator is 0 or the division is by 0
+              </p>
+            ) : (
+            <>
             <div className="flex flex-col items-center gap-1">
               <span className="text-4xl font-bold">{result.numerator}</span>
               <div className="w-16 border-t-4 border-foreground" />
@@ -156,6 +163,8 @@ export function FractionsCalculator() {
                 <p className="text-2xl font-semibold">{result.mixed}</p>
               </div>
             </div>
+            </>
+            )}
           </CardContent>
         </Card>
       </div>

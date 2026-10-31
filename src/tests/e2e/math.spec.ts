@@ -404,11 +404,15 @@ test.describe('Fractions calculator', () => {
   })
 
   test('disables export for a zero denominator or division by zero', async ({ page }) => {
+    const undefinedMessage = page.getByText('Undefined: a denominator is 0 or the division is by 0', { exact: true })
+
     await visit(page, '/math/fractions?d2=0')
     await expectExportDisabled(page)
+    await expect(undefinedMessage).toBeVisible()
 
     await visit(page, '/math/fractions?op=divide&n2=0')
     await expectExportDisabled(page)
+    await expect(undefinedMessage).toBeVisible()
   })
 
   test('exports CSV and PDF', async ({ page }) => {
