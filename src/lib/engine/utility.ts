@@ -34,8 +34,39 @@ export interface ConversionResult {
   formula: string   // e.g. "1 km = 0.621371 miles"
 }
 
-export function calculateConversion(_inputs: ConversionInputs): ConversionResult {
-  throw new Error('Not implemented')
+const TO_BASE: Record<string, Record<string, number>> = {
+  length:   { m: 1, km: 1000, mi: 1609.344, ft: 0.3048, in: 0.0254, cm: 0.01, yd: 0.9144 },
+  weight:   { kg: 1, g: 0.001, lb: 0.453592, oz: 0.0283495, t: 1000 },
+  volume:   { L: 1, mL: 0.001, gal: 3.78541, 'fl oz': 0.0295735, cup: 0.236588, pt: 0.473176, qt: 0.946353 },
+  speed:    { 'm/s': 1, 'km/h': 1 / 3.6, mph: 0.44704, knot: 0.514444 },
+  area:     { 'm²': 1, 'km²': 1e6, 'ft²': 0.092903, acre: 4046.86, 'mi²': 2.59e6, 'cm²': 0.0001 },
+  pressure: { Pa: 1, kPa: 1000, bar: 100000, psi: 6894.76, atm: 101325 },
+}
+
+function convertTemperature(value: number, from: string, to: string): number {
+  let celsius: number
+  if (from === 'C') celsius = value
+  else if (from === 'F') celsius = (value - 32) * 5 / 9
+  else celsius = value - 273.15
+  if (to === 'C') return celsius
+  if (to === 'F') return celsius * 9 / 5 + 32
+  return celsius + 273.15
+}
+
+export function calculateConversion({ category, fromUnit, toUnit, value }: ConversionInputs): ConversionResult {
+  if (category === 'temperature') {
+    const result = convertTemperature(value, fromUnit, toUnit)
+    return {
+      result,
+      formula: `${value}°${fromUnit} = ${Number(result.toPrecision(6))}°${toUnit}`,
+    }
+  }
+  const result = value * TO_BASE[category][fromUnit] / TO_BASE[category][toUnit]
+  const ratio = TO_BASE[category][fromUnit] / TO_BASE[category][toUnit]
+  return {
+    result,
+    formula: `1 ${fromUnit} = ${Number(ratio.toPrecision(6))} ${toUnit}`,
+  }
 }
 
 // --- Geometry ---
