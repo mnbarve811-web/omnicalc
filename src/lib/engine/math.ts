@@ -31,8 +31,8 @@ export function calculatePercentage(inputs: PercentageInputs): PercentageResult 
     return { result, label: `${x} is ${roundPercentageLabel(result)}% of ${y}` }
   }
 
-  // percentChange: y = old value, x = new value
-  const result = y === 0 ? 0 : ((x - y) / y) * 100
+  // percentChange: y = old value, x = new value. Dividing by |y| keeps a rise positive when the old value is negative
+  const result = y === 0 ? 0 : ((x - y) / Math.abs(y)) * 100
   return { result, label: `${y} → ${x} = ${roundPercentageLabel(result)}% change` }
 }
 

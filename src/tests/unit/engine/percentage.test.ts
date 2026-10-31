@@ -36,4 +36,8 @@ describe('calculatePercentage', () => {
     expect(typeof r.label).toBe('string')
     expect(r.label.length).toBeGreaterThan(0)
   })
+  it('reports a rise between negative values as a positive change', () => {
+    expect(calculatePercentage({ mode: 'percentChange', x: -25, y: -50 }).result).toBe(50)
+    expect(calculatePercentage({ mode: 'percentChange', x: -75, y: -50 }).result).toBe(-50)
+  })
 })
