@@ -2,9 +2,11 @@
 
 import { useCalculatorUrl, type Schema } from '@/lib/hooks/use-calculator-url'
 import { calculateQuadratic, type QuadraticInputs } from '@/lib/engine/math'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { ExportButtons } from '@/components/common/ExportButtons'
+import { Field } from '@/components/common/Field'
+import { CalculatorGrid, InputPanel, ResultPanel } from '@/components/common/CalculatorLayout'
+import { ResultHero, ResultStat, ResultStats } from '@/components/common/Result'
+import { ResultActions } from '@/components/common/ResultActions'
+import { MobileResultBar } from '@/components/common/MobileResultBar'
 
 const SCHEMA = {
   a: { param: 'a', default: 1,  parse: Number, serialize: String },
@@ -38,7 +40,7 @@ function NumberLine({ roots }: { roots: [number] | [number, number] }) {
   }
 
   return (
-    <div className="mt-6 px-2">
+    <div className="px-2">
       <p className="text-sm font-medium text-muted-foreground mb-3">Number Line</p>
       <div className="relative h-10" role="img" aria-label={`Number line marking roots at ${roots.map(formatNumber).join(' and ')}`}>
         <div className="absolute top-4 left-0 right-0 h-0.5 bg-border" />
@@ -49,7 +51,7 @@ function NumberLine({ roots }: { roots: [number] | [number, number] }) {
             style={{ left: `${toPercent(t)}%`, transform: 'translateX(-50%)' }}
           >
             <div className="w-px h-2 bg-muted-foreground mt-3" />
-            <span className="text-xs text-muted-foreground mt-0.5">{Number(t.toPrecision(4))}</span>
+            <span className="mt-0.5 text-xs tabular-nums text-muted-foreground">{Number(t.toPrecision(4))}</span>
           </div>
         ))}
         {roots.map((r, i) => (
@@ -74,43 +76,24 @@ export function QuadraticCalculator() {
   const canExport = values.a !== 0 && Number.isFinite(values.b) && Number.isFinite(values.c)
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-8">
-      <Card>
-        <CardHeader>
-          <CardTitle>Equation</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-2 flex-wrap font-mono text-lg">
-            <Input
-              type="number"
-              aria-label="Coefficient a"
-              className="w-20"
-              value={values.a}
-              onChange={(e) => setValues({ a: Number(e.target.value) })}
-            />
-            <span>x² +</span>
-            <Input
-              type="number"
-              aria-label="Coefficient b"
-              className="w-20"
-              value={values.b}
-              onChange={(e) => setValues({ b: Number(e.target.value) })}
-            />
-            <span>x +</span>
-            <Input
-              type="number"
-              aria-label="Coefficient c"
-              className="w-20"
-              value={values.c}
-              onChange={(e) => setValues({ c: Number(e.target.value) })}
-            />
-            <span>= 0</span>
-          </div>
-        </CardContent>
-      </Card>
+    <CalculatorGrid>
+      <InputPanel title="Equation">
+        <p className="text-lg font-medium tracking-[-0.01em] text-foreground">ax² + bx + c = 0</p>
+        <Field label="Coefficient a" suffix="x²" type="number" value={values.a} onChange={(e) => setValues({ a: Number(e.target.value) })} />
+        <Field label="Coefficient b" suffix="x" type="number" value={values.b} onChange={(e) => setValues({ b: Number(e.target.value) })} />
+        <Field label="Coefficient c" type="number" value={values.c} onChange={(e) => setValues({ c: Number(e.target.value) })} />
+      </InputPanel>
 
-      <div id="quadratic-results" className="space-y-6">
-        <ExportButtons
+      <ResultPanel id="quadratic-results">
+        <ResultHero label="Roots" value={result.rootsDisplay} caption={describeDiscriminant(values.a, result.discriminant)}>
+          {result.roots.length > 0 && <NumberLine roots={result.roots as [number] | [number, number]} />}
+        </ResultHero>
+
+        <ResultStats>
+          <ResultStat label="Discriminant (b² − 4ac)" value={formatNumber(result.discriminant)} />
+        </ResultStats>
+
+        <ResultActions
           resultsId="quadratic-results"
           filename="quadratic-roots"
           csvRows={[{
@@ -122,28 +105,11 @@ export function QuadraticCalculator() {
             'Root 2': result.roots[1] !== undefined ? formatNumber(result.roots[1]) : '',
             Roots: result.rootsDisplay,
           }]}
-          disabled={!canExport}
+          canExport={canExport}
         />
-        <Card>
-          <CardHeader>
-            <CardTitle>Roots</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold font-mono">{result.rootsDisplay}</p>
-            {result.roots.length > 0 && <NumberLine roots={result.roots as [number] | [number, number]} />}
-          </CardContent>
-        </Card>
+      </ResultPanel>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Discriminant (b² − 4ac)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold font-mono">{formatNumber(result.discriminant)}</p>
-            <p className="text-sm text-muted-foreground mt-1">{describeDiscriminant(values.a, result.discriminant)}</p>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+      <MobileResultBar targetId="quadratic-results" value={result.rootsDisplay} caption="solution" />
+    </CalculatorGrid>
   )
 }
