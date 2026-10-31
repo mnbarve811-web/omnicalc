@@ -1,5 +1,6 @@
 'use client'
 
+import { useRef } from 'react'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 
 export type FieldDef<V> = {
@@ -17,6 +18,9 @@ export function useCalculatorUrl<T extends Record<string, unknown>>(
   const router = useRouter()
   const searchParams = useSearchParams()
   const pathname = usePathname()
+  // Edits written since the URL last changed. Two quick edits would otherwise both start from the
+  // same render's values, and the second router.replace would drop the first edit.
+  const pending = useRef<{ params: unknown; values: T } | null>(null)
 
   const values = Object.fromEntries(
     Object.entries(schema).map(([key, fieldRaw]) => {
@@ -34,7 +38,9 @@ export function useCalculatorUrl<T extends Record<string, unknown>>(
   ) as T
 
   function setValues(patch: Partial<T>) {
-    const next = { ...values, ...patch }
+    const base = pending.current?.params === searchParams ? pending.current.values : values
+    const next = { ...base, ...patch }
+    pending.current = { params: searchParams, values: next }
     const params = new URLSearchParams()
     let hasNonDefault = false
     for (const [key, fieldRaw] of Object.entries(schema)) {

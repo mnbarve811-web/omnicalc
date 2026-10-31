@@ -38,6 +38,15 @@ describe('useCalculatorUrl', () => {
     expect(result.current[0]).toEqual({ price: 500000, rate: 7.25 })
   })
 
+  it('keeps an earlier patch when setValues is called again before the URL updates', () => {
+    const { result } = renderHook(() => useCalculatorUrl(SCHEMA))
+    act(() => {
+      result.current[1]({ price: 400000 })
+      result.current[1]({ rate: 7 })
+    })
+    expect(mockReplace).toHaveBeenLastCalledWith('/financial/mortgage?price=400000&rate=7', { scroll: false })
+  })
+
   it('falls back to default when Number() returns NaN', () => {
     mockGet.mockReturnValue('not-a-number')
     const { result } = renderHook(() => useCalculatorUrl(SCHEMA))
