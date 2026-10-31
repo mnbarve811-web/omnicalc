@@ -2,9 +2,15 @@
 
 import { useCalculatorUrl, type Schema } from '@/lib/hooks/use-calculator-url'
 import { calculateConversion, type ConversionInputs, type UnitCategory } from '@/lib/engine/utility'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { ExportButtons } from '@/components/common/ExportButtons'
+import { Field } from '@/components/common/Field'
+import { CalculatorGrid, InputPanel, ResultPanel } from '@/components/common/CalculatorLayout'
+import { ResultHero } from '@/components/common/Result'
+import { ResultActions } from '@/components/common/ResultActions'
+import { MobileResultBar } from '@/components/common/MobileResultBar'
+
+const SELECT_CLASS =
+  'h-11 w-full rounded-sm border border-input bg-card px-3 text-base outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:h-10 md:text-sm'
+const LABEL_CLASS = 'mb-1.5 block text-sm font-medium text-foreground'
 
 const UNITS_PER_CATEGORY: Record<UnitCategory, string[]> = {
   length:      ['m', 'km', 'mi', 'ft', 'in', 'cm', 'yd'],
@@ -69,17 +75,16 @@ export function UnitConversionCalculator() {
     { value: 'pressure',    label: 'Pressure' },
   ]
 
+  const convertedValue = `${Number(result.result.toPrecision(7)).toString()} ${toUnit}`
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Convert Units</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Category */}
+    <CalculatorGrid>
+      <InputPanel title="Convert Units">
         <div>
-          <label className="text-sm font-medium mb-1 block">Category</label>
+          <label htmlFor="unit-category" className={LABEL_CLASS}>Category</label>
           <select
-            className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background"
+            id="unit-category"
+            className={SELECT_CLASS}
             value={values.category}
             onChange={(e) => handleCategoryChange(e.target.value as UnitCategory)}
           >
@@ -89,22 +94,19 @@ export function UnitConversionCalculator() {
           </select>
         </div>
 
-        {/* Value input */}
-        <div>
-          <label className="text-sm font-medium mb-1 block">Value</label>
-          <Input
-            type="number"
-            value={values.value}
-            onChange={(e) => setValues({ value: Number(e.target.value) } as Partial<ConversionInputs & Record<string, unknown>>)}
-          />
-        </div>
+        <Field
+          label="Value"
+          type="number"
+          value={values.value}
+          onChange={(e) => setValues({ value: Number(e.target.value) } as Partial<ConversionInputs & Record<string, unknown>>)}
+        />
 
-        {/* From / To unit selects */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="text-sm font-medium mb-1 block">From</label>
+            <label htmlFor="unit-from" className={LABEL_CLASS}>From</label>
             <select
-              className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background"
+              id="unit-from"
+              className={SELECT_CLASS}
               value={fromUnit}
               onChange={(e) => setValues({ fromUnit: e.target.value } as Partial<ConversionInputs & Record<string, unknown>>)}
             >
@@ -114,9 +116,10 @@ export function UnitConversionCalculator() {
             </select>
           </div>
           <div>
-            <label className="text-sm font-medium mb-1 block">To</label>
+            <label htmlFor="unit-to" className={LABEL_CLASS}>To</label>
             <select
-              className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background"
+              id="unit-to"
+              className={SELECT_CLASS}
               value={toUnit}
               onChange={(e) => setValues({ toUnit: e.target.value } as Partial<ConversionInputs & Record<string, unknown>>)}
             >
@@ -126,29 +129,27 @@ export function UnitConversionCalculator() {
             </select>
           </div>
         </div>
+      </InputPanel>
 
-        {/* Result */}
-        <div id="unit-conversion-results" className="border-t pt-4">
-          <ExportButtons
-            resultsId="unit-conversion-results"
-            filename="unit-conversion"
-            csvRows={[{
-              Category: CATEGORIES.find((cat) => cat.value === values.category)?.label ?? values.category,
-              'From Value': values.value,
-              'From Unit': fromUnit,
-              'To Value': Number(result.result.toPrecision(7)),
-              'To Unit': toUnit,
-              Formula: result.formula,
-            }]}
-            disabled={!canExport}
-          />
-          <p className="text-sm text-muted-foreground mb-1">Result</p>
-          <p className="text-4xl font-bold">
-            {Number(result.result.toPrecision(7)).toString()} <span className="text-2xl font-normal text-muted-foreground">{toUnit}</span>
-          </p>
-          <p className="text-sm text-muted-foreground mt-2">{result.formula}</p>
-        </div>
-      </CardContent>
-    </Card>
+      <ResultPanel id="unit-conversion-results">
+        <ResultHero label="Result" value={convertedValue} caption={result.formula} />
+
+        <ResultActions
+          resultsId="unit-conversion-results"
+          filename="unit-conversion"
+          csvRows={[{
+            Category: CATEGORIES.find((cat) => cat.value === values.category)?.label ?? values.category,
+            'From Value': values.value,
+            'From Unit': fromUnit,
+            'To Value': Number(result.result.toPrecision(7)),
+            'To Unit': toUnit,
+            Formula: result.formula,
+          }]}
+          canExport={canExport}
+        />
+      </ResultPanel>
+
+      <MobileResultBar targetId="unit-conversion-results" value={convertedValue} caption={`from ${values.value} ${fromUnit}`} />
+    </CalculatorGrid>
   )
 }

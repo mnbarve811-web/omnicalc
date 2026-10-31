@@ -87,8 +87,12 @@ test.describe('Utility Pillar hub', () => {
 })
 
 test.describe('Unit Converter', () => {
-  const resultValue = (page: Page) => page.locator('#unit-conversion-results p.text-4xl')
-  const formulaText = (page: Page) => page.locator('#unit-conversion-results p.text-sm.mt-2')
+  const resultHero = (page: Page) =>
+    page.locator('#unit-conversion-results [data-slot="card"]').filter({
+      has: page.locator('[data-slot="card-title"]').getByText('Result', { exact: true }),
+    })
+  const resultValue = (page: Page) => resultHero(page).locator('[data-slot="card-content"]')
+  const formulaText = (page: Page) => resultHero(page).locator('[data-slot="card-content"] + div')
   const categorySelect = (page: Page) => page.locator('main select').nth(0)
   const fromSelect = (page: Page) => page.locator('main select').nth(1)
   const toSelect = (page: Page) => page.locator('main select').nth(2)
