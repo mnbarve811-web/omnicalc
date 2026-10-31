@@ -43,3 +43,52 @@ describe('calculateAutoLoan', () => {
     expect(r.monthlyPayment).toBeCloseTo(loanBalance / BASE.loanTermMonths, 2)
   })
 })
+
+describe('calculateAutoLoan edge cases', () => {
+  it('matches the standard payment for $25,000 at 6% over 60 months', () => {
+    const r = calculateAutoLoan({ vehiclePrice: 25000, downPayment: 0, tradeInValue: 0, interestRate: 6, loanTermMonths: 60, salesTaxRate: 0 })
+    expect(r.monthlyPayment).toBeCloseTo(483.32, 2)
+  })
+
+  it('sales tax is charged on the full price before down payment and trade-in', () => {
+    const r = calculateAutoLoan({ ...BASE, downPayment: 10000, tradeInValue: 5000 })
+    expect(r.loanBalance).toBeCloseTo(30000 * 1.08 - 15000, 6)
+  })
+
+  it('a down payment and trade-in above the price are clamped to a zero loan', () => {
+    const r = calculateAutoLoan({ ...BASE, downPayment: 30000, tradeInValue: 10000 })
+    expect(r.loanBalance).toBe(0)
+    expect(r.monthlyPayment).toBe(0)
+    expect(r.totalInterestPaid).toBe(0)
+  })
+
+  it('total interest equals all payments minus the amount financed', () => {
+    const r = calculateAutoLoan(BASE)
+    expect(r.totalInterestPaid).toBeCloseTo(r.monthlyPayment * BASE.loanTermMonths - r.loanBalance, 2)
+  })
+
+  it('a one-month term repays the balance plus one month of interest', () => {
+    const r = calculateAutoLoan({ vehiclePrice: 1000, downPayment: 0, tradeInValue: 0, interestRate: 12, loanTermMonths: 1, salesTaxRate: 0 })
+    expect(r.monthlyPayment).toBeCloseTo(1010, 6)
+    expect(r.totalInterestPaid).toBeCloseTo(10, 6)
+  })
+
+  it('zero interest rate charges no interest', () => {
+    const r = calculateAutoLoan({ ...BASE, interestRate: 0 })
+    expect(r.totalInterestPaid).toBe(0)
+    expect(r.amortizationSchedule[BASE.loanTermMonths - 1].balance).toBeCloseTo(0, 6)
+  })
+
+  it('a longer term lowers the payment but raises total interest', () => {
+    const short = calculateAutoLoan({ ...BASE, loanTermMonths: 36 })
+    const long = calculateAutoLoan({ ...BASE, loanTermMonths: 84 })
+    expect(long.monthlyPayment).toBeLessThan(short.monthlyPayment)
+    expect(long.totalInterestPaid).toBeGreaterThan(short.totalInterestPaid)
+  })
+
+  // Bug: no zero-term guard (calculateMortgage has one), so the payment is Infinity and the UI shows "$∞"
+  it.todo('a zero-month term returns a finite payment', () => {
+    const r = calculateAutoLoan({ ...BASE, loanTermMonths: 0 })
+    expect(Number.isFinite(r.monthlyPayment)).toBe(true)
+  })
+})

@@ -70,3 +70,54 @@ describe('calculateCompoundInterest', () => {
     expect(r.futureValue).toBeCloseTo(13000, 0) // 1000 + 100*12*10
   })
 })
+
+describe('calculateMortgage edge cases', () => {
+  it('matches the published worked example for a $320,000 loan at 7% over 30 years', () => {
+    const r = calculateMortgage({ ...BASE, homePrice: 400000, downPayment: 80000, interestRate: 7 })
+    expect(r.monthlyPrincipalAndInterest).toBeCloseTo(2128.97, 2)
+    expect(r.amortizationSchedule[0].interest).toBeCloseTo(1866.67, 2)
+    expect(r.amortizationSchedule[0].principal).toBeCloseTo(262.3, 2)
+    expect(r.totalInterestPaid).toBeCloseTo(446428, -1)
+  })
+
+  it('principal portions sum to the loan amount and interest is payments minus principal', () => {
+    const r = calculateMortgage(BASE)
+    const principalSum = r.amortizationSchedule.reduce((sum, row) => sum + row.principal, 0)
+    expect(principalSum).toBeCloseTo(240000, 2)
+    expect(r.totalInterestPaid).toBeCloseTo(r.monthlyPrincipalAndInterest * 360 - 240000, 2)
+  })
+
+  it('a zero-year term returns zeros and an empty schedule', () => {
+    const r = calculateMortgage({ ...BASE, loanTermYears: 0, propertyTax: 300 })
+    expect(r).toEqual({ monthlyPrincipalAndInterest: 0, monthlyTotal: 0, totalPaymentCount: 0, totalInterestPaid: 0, amortizationSchedule: [] })
+  })
+
+  it('a down payment above the price is clamped to a zero loan, leaving only escrow costs', () => {
+    const r = calculateMortgage({ ...BASE, downPayment: 350000, propertyTax: 300, homeInsurance: 120, hoa: 50 })
+    expect(r.monthlyPrincipalAndInterest).toBe(0)
+    expect(r.totalInterestPaid).toBe(0)
+    expect(r.monthlyTotal).toBe(470)
+    expect(r.amortizationSchedule.every(row => row.balance === 0)).toBe(true)
+  })
+
+  it('zero interest rate charges no interest and pays down evenly', () => {
+    const r = calculateMortgage({ ...BASE, interestRate: 0 })
+    expect(r.totalInterestPaid).toBe(0)
+    expect(r.amortizationSchedule[0].principal).toBeCloseTo(240000 / 360, 6)
+    expect(r.amortizationSchedule[359].balance).toBeCloseTo(0, 6)
+  })
+
+  it('balance never increases month over month', () => {
+    const r = calculateMortgage(BASE)
+    for (let i = 1; i < r.amortizationSchedule.length; i++) {
+      expect(r.amortizationSchedule[i].balance).toBeLessThanOrEqual(r.amortizationSchedule[i - 1].balance)
+    }
+  })
+
+  it('a one-year term has 12 payments', () => {
+    const r = calculateMortgage({ ...BASE, loanTermYears: 1 })
+    expect(r.totalPaymentCount).toBe(12)
+    expect(r.amortizationSchedule).toHaveLength(12)
+    expect(r.amortizationSchedule[11].balance).toBeCloseTo(0, 6)
+  })
+})
