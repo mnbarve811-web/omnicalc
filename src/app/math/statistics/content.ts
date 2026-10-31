@@ -2,7 +2,7 @@ import type { FAQItem } from '@/components/common/FAQSection'
 
 export const guideText = `Descriptive statistics summarize a dataset with a handful of numbers, so you can understand it without reading every value. This statistics calculator takes a list of numbers and reports ten results at once: the count, sum, mean, median, mode, range, minimum, maximum, variance, and standard deviation. It also draws a frequency chart showing how many times each distinct value occurs. It is useful for homework, lab measurements, survey answers, test scores, sports results, or any list of numbers where you want to know the typical value and how spread out the data is.
 
-How to use this calculator: type or paste your numbers into the box, separated by commas, for example 12, 15, 15, 18. Spaces around the commas are fine, and negative numbers and decimals such as -3.5 or 0.25 work as normal. Results update instantly as you type, so there is no button to press. Anything between two commas that is not a number, such as a word, a unit, or an empty slot, is skipped. If nothing valid remains, the calculator tells you that no valid numbers were found. Decimal results are shown to at most four decimal places.
+How to use this calculator: type or paste your numbers into the box, separated by commas, spaces, semicolons, or new lines, for example 12, 15, 15, 18. A column pasted from a spreadsheet, one number per line, works as it is, and negative numbers and decimals such as -3.5 or 0.25 work as normal. Results update instantly as you type, so there is no button to press. Any entry that is not a number, such as a word, a unit, or an empty slot, is skipped. If nothing valid remains, the calculator tells you that no valid numbers were found. Decimal results are shown to at most four decimal places.
 
 Measures of center: the mean is the arithmetic average, found by adding every value and dividing by how many values there are. The median is the middle value once the data is sorted from smallest to largest. With an even number of values there is no single middle value, so the median is the average of the two middle ones. The mode is the value that occurs most often. If two or more values tie for the highest frequency, all of them are listed, so a dataset can have more than one mode. If every distinct value appears the same number of times, as in 1, 2, 3 or 5, 5, 5, no value stands out and the mode is shown as a dash.
 
@@ -16,7 +16,7 @@ Interpreting the results: compare the mean and the median first. When they are c
 
 Tips: enter every observation, including repeats. If a score of 80 occurred three times, type 80 three times, because each entry counts toward the mean, the median, and the mode. Keep all values in the same unit before you paste them, since mixing centimetres and metres will distort every result. If you need to check a single suspicious value, remove it and watch how much the mean and standard deviation change; a large shift means that value has a strong influence on the summary.
 
-Common mistakes and limitations: commas are the only separator. Data copied from a spreadsheet column usually arrives one number per line, and line breaks or spaces on their own are not treated as separators, so 3 4 5 typed without commas is read as one invalid entry and skipped. Do not use thousands separators either, because 1,200 is read as two values, 1 and 200. Symbols attached to numbers, such as 45% or $5, make an entry invalid and it is ignored. Remember that the variance and standard deviation shown are population values, so a textbook question that asks for the sample standard deviation will expect a slightly larger answer. Finally, this calculator works with a plain list of values. It does not calculate quartiles, percentiles, the interquartile range, weighted means, or statistics for grouped frequency tables.`
+Common mistakes and limitations: because commas separate values, do not use thousands separators, since 1,200 is read as two values, 1 and 200; type 1200 instead. Symbols attached to numbers, such as 45% or $5, make an entry invalid and it is ignored. Remember that the variance and standard deviation shown are population values, so a textbook question that asks for the sample standard deviation will expect a slightly larger answer. Finally, this calculator works with a plain list of values. It does not calculate quartiles, percentiles, the interquartile range, weighted means, or statistics for grouped frequency tables.`
 
 export const faqItems: FAQItem[] = [
   {
@@ -41,7 +41,7 @@ export const faqItems: FAQItem[] = [
   },
   {
     question: 'How do I enter my data?',
-    answer: 'Separate the numbers with commas, for example 3, 7, 7, 10. Commas are the only separator, so numbers copied one per line from a spreadsheet need commas added between them. Do not use thousands separators (1,200 is read as 1 and 200), and leave out symbols such as % or $, because entries that are not plain numbers are skipped.',
+    answer: 'Separate the numbers with commas, spaces, semicolons, or new lines, for example 3, 7, 7, 10. A column copied from a spreadsheet, one number per line, can be pasted as it is. Do not use thousands separators (1,200 is read as 1 and 200), and leave out symbols such as % or $, because entries that are not plain numbers are skipped.',
   },
 ]
 

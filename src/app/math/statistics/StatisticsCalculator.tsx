@@ -10,7 +10,7 @@ import {
 
 function parseValues(raw: string): number[] {
   return raw
-    .split(',')
+    .split(/[\s,;]+/)
     .map(s => s.trim())
     .filter(s => s !== '')
     .map(Number)
@@ -56,11 +56,11 @@ export function StatisticsCalculator() {
         <CardHeader><CardTitle>Data Input</CardTitle></CardHeader>
         <CardContent>
           <label className="text-sm font-medium mb-2 block">
-            Numbers (comma-separated)
+            Numbers (separated by commas, spaces, or new lines)
           </label>
           <textarea
             className="w-full min-h-[80px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-y"
-            placeholder="Enter numbers separated by commas, e.g. 1, 2, 3, 4, 5"
+            placeholder="e.g. 1, 2, 3, 4, 5 or one number per line"
             value={raw}
             onChange={e => setRaw(e.target.value)}
           />
