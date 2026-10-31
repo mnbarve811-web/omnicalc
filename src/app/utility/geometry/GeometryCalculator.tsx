@@ -4,6 +4,7 @@ import { useCalculatorUrl, type Schema } from '@/lib/hooks/use-calculator-url'
 import { calculateGeometry, type GeometryShape } from '@/lib/engine/utility'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { ExportButtons } from '@/components/common/ExportButtons'
 
 interface GeomParams {
   shape: GeometryShape
@@ -151,17 +152,44 @@ const RESULT_LABELS: Record<string, string> = {
   surfaceArea: 'Surface Area',
 }
 
+const DIMENSION_LABELS: Record<string, string> = {
+  radius: 'Radius',
+  width: 'Width',
+  height: 'Height',
+  base: 'Base',
+  a: 'Side a',
+  b: 'Side b',
+  c: 'Side c',
+}
+
+function hasRequiredDimensions(v: GeomParams): boolean {
+  switch (v.shape) {
+    case 'circle':    return v.r > 0
+    case 'rectangle': return v.w > 0 && v.h > 0
+    case 'triangle':  return v.base > 0 && v.h > 0
+    case 'cylinder':  return v.r > 0 && v.h > 0
+    case 'sphere':    return v.r > 0
+    case 'cone':      return v.r > 0 && v.h > 0
+  }
+}
+
 export function GeometryCalculator() {
   const [values, setValues] = useCalculatorUrl<GeomParams & Record<string, unknown>>(
     SCHEMA as Schema<GeomParams & Record<string, unknown>>
   )
 
   const v = values
-  const result = calculateGeometry({ shape: v.shape, dimensions: getDimensions(v) })
+  const dimensions = getDimensions(v)
+  const result = calculateGeometry({ shape: v.shape, dimensions })
 
   const resultEntries = Object.entries(result).filter(
     (entry): entry is [string, number] => entry[1] !== undefined
   )
+
+  const canExport = hasRequiredDimensions(v)
+  const csvRow: Record<string, unknown> = { Shape: SHAPES.find(s => s.id === v.shape)?.label ?? v.shape }
+  for (const [key, val] of Object.entries(dimensions)) csvRow[DIMENSION_LABELS[key] ?? key] = val
+  for (const [key, val] of resultEntries) csvRow[RESULT_LABELS[key] ?? key] = fmt(val)
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-8">
@@ -220,7 +248,13 @@ export function GeometryCalculator() {
       </Card>
 
       {/* Right: diagram + results */}
-      <div className="space-y-6">
+      <div id="geometry-results" className="space-y-6">
+        <ExportButtons
+          resultsId="geometry-results"
+          filename="geometry"
+          csvRows={[csvRow]}
+          disabled={!canExport}
+        />
         <Card>
           <CardHeader><CardTitle>Diagram</CardTitle></CardHeader>
           <CardContent>

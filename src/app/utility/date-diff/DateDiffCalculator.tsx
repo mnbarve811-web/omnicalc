@@ -4,6 +4,7 @@ import { useCalculatorUrl, type Schema } from '@/lib/hooks/use-calculator-url'
 import { calculateDateDiff, type DateDiffInputs } from '@/lib/engine/utility'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { ExportButtons } from '@/components/common/ExportButtons'
 
 function today(): string {
   return new Date().toISOString().split('T')[0]
@@ -29,12 +30,17 @@ function formatDate(iso: string): string {
   })
 }
 
+function isValidIsoDate(value: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(new Date(value).getTime())
+}
+
 export function DateDiffCalculator() {
   const [values, setValues] = useCalculatorUrl<DateDiffInputs & Record<string, unknown>>(
     SCHEMA as Schema<DateDiffInputs & Record<string, unknown>>
   )
 
   const result = calculateDateDiff(values as DateDiffInputs)
+  const canExport = isValidIsoDate(values.startDate as string) && isValidIsoDate(values.endDate as string)
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-8">
@@ -60,7 +66,20 @@ export function DateDiffCalculator() {
         </CardContent>
       </Card>
 
-      <div className="space-y-6">
+      <div id="date-diff-results" className="space-y-6">
+        <ExportButtons
+          resultsId="date-diff-results"
+          filename="date-difference"
+          csvRows={[{
+            'Start Date': values.startDate,
+            'End Date': values.endDate,
+            Years: result.years,
+            Months: result.months,
+            Days: result.days,
+            'Total Days': result.totalDays,
+          }]}
+          disabled={!canExport}
+        />
         <div className="grid grid-cols-2 gap-4">
           {[
             { label: 'Years',      value: result.years },
