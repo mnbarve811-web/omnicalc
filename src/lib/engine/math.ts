@@ -14,8 +14,26 @@ export interface PercentageResult {
   label: string
 }
 
-export function calculatePercentage(_inputs: PercentageInputs): PercentageResult {
-  throw new Error('Not implemented')
+function roundPercentageLabel(n: number): number {
+  return Math.round(n * 100) / 100
+}
+
+export function calculatePercentage(inputs: PercentageInputs): PercentageResult {
+  const { mode, x, y } = inputs
+
+  if (mode === 'whatIsXPercentOfY') {
+    const result = (x / 100) * y
+    return { result, label: `${x}% of ${y} = ${roundPercentageLabel(result)}` }
+  }
+
+  if (mode === 'xIsWhatPercentOfY') {
+    const result = y === 0 ? 0 : (x / y) * 100
+    return { result, label: `${x} is ${roundPercentageLabel(result)}% of ${y}` }
+  }
+
+  // percentChange: y = old value, x = new value
+  const result = y === 0 ? 0 : ((x - y) / y) * 100
+  return { result, label: `${y} → ${x} = ${roundPercentageLabel(result)}% change` }
 }
 
 // --- Statistics ---
