@@ -3,8 +3,11 @@
 import { useCalculatorUrl, type Schema } from '@/lib/hooks/use-calculator-url'
 import { calculateGeometry, type GeometryShape } from '@/lib/engine/utility'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { ExportButtons } from '@/components/common/ExportButtons'
+import { Field } from '@/components/common/Field'
+import { CalculatorGrid, InputPanel, ResultPanel } from '@/components/common/CalculatorLayout'
+import { ResultHero, ResultStat, ResultStats } from '@/components/common/Result'
+import { ResultActions } from '@/components/common/ResultActions'
+import { MobileResultBar } from '@/components/common/MobileResultBar'
 
 interface GeomParams {
   shape: GeometryShape
@@ -131,18 +134,7 @@ function NumericInput({
   value: number
   onChange: (v: number) => void
 }) {
-  return (
-    <div>
-      <label htmlFor={id} className="text-sm font-medium mb-1 block">{label}</label>
-      <Input
-        id={id}
-        type="number"
-        value={value}
-        min={0}
-        onChange={e => onChange(Number(e.target.value))}
-      />
-    </div>
-  )
+  return <Field id={id} label={label} type="number" value={value} min={0} onChange={e => onChange(Number(e.target.value))} />
 }
 
 const RESULT_LABELS: Record<string, string> = {
@@ -191,92 +183,88 @@ export function GeometryCalculator() {
   for (const [key, val] of Object.entries(dimensions)) csvRow[DIMENSION_LABELS[key] ?? key] = val
   for (const [key, val] of resultEntries) csvRow[RESULT_LABELS[key] ?? key] = fmt(val)
 
+  const [primaryKey, primaryValue] = resultEntries.find(([key]) => key === 'volume') ?? resultEntries[0]
+  const secondaryEntries = resultEntries.filter(([key]) => key !== primaryKey)
+  const primaryLabel = RESULT_LABELS[primaryKey] ?? primaryKey
+  const shapeLabel = SHAPES.find(s => s.id === v.shape)?.label ?? v.shape
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-8">
-      {/* Left: shape selector + inputs */}
-      <Card>
-        <CardHeader><CardTitle>Shape &amp; Dimensions</CardTitle></CardHeader>
-        <CardContent className="space-y-6">
-          {/* Shape buttons */}
-          <div>
-            <p className="text-sm font-medium mb-2">Shape</p>
-            <div className="grid grid-cols-3 gap-2">
-              {SHAPES.map(s => (
-                <button
-                  key={s.id}
-                  type="button"
-                  aria-pressed={v.shape === s.id}
-                  onClick={() => setValues({ shape: s.id })}
-                  className={`rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
-                    v.shape === s.id
-                      ? 'bg-primary text-primary-foreground border-primary'
-                      : 'border-input bg-background hover:bg-accent hover:text-accent-foreground'
-                  }`}
-                >
-                  {s.label}
-                </button>
-              ))}
-            </div>
+    <CalculatorGrid>
+      <InputPanel title="Shape & Dimensions">
+        <div>
+          <p className="mb-1.5 text-sm font-medium text-foreground">Shape</p>
+          <div className="grid grid-cols-3 gap-2">
+            {SHAPES.map(s => (
+              <button
+                key={s.id}
+                type="button"
+                aria-pressed={v.shape === s.id}
+                onClick={() => setValues({ shape: s.id })}
+                className={`h-11 rounded-sm border px-3 text-sm font-medium transition-colors md:h-10 ${
+                  v.shape === s.id
+                    ? 'bg-primary text-primary-foreground border-primary'
+                    : 'border-input bg-card hover:bg-accent hover:text-accent-foreground'
+                }`}
+              >
+                {s.label}
+              </button>
+            ))}
           </div>
+        </div>
 
-          {/* Dynamic dimension inputs */}
-          <div className="space-y-4">
-            {v.shape === 'circle' && (
-              <NumericInput id="geom-radius" label="Radius" value={v.r} onChange={r => setValues({ r })} />
-            )}
-            {v.shape === 'rectangle' && (<>
-              <NumericInput id="geom-width" label="Width" value={v.w} onChange={w => setValues({ w })} />
-              <NumericInput id="geom-height" label="Height" value={v.h} onChange={h => setValues({ h })} />
-            </>)}
-            {v.shape === 'triangle' && (<>
-              <NumericInput id="geom-base" label="Base" value={v.base} onChange={base => setValues({ base })} />
-              <NumericInput id="geom-height" label="Height" value={v.h} onChange={h => setValues({ h })} />
-              <p className="text-xs text-muted-foreground">Optional: enter all three sides to calculate perimeter</p>
-              <NumericInput id="geom-side-a" label="Side a" value={v.a} onChange={a => setValues({ a })} />
-              <NumericInput id="geom-side-b" label="Side b" value={v.b} onChange={b => setValues({ b })} />
-              <NumericInput id="geom-side-c" label="Side c" value={v.c} onChange={c => setValues({ c })} />
-            </>)}
-            {(v.shape === 'cylinder' || v.shape === 'cone') && (<>
-              <NumericInput id="geom-radius" label="Radius" value={v.r} onChange={r => setValues({ r })} />
-              <NumericInput id="geom-height" label="Height" value={v.h} onChange={h => setValues({ h })} />
-            </>)}
-            {v.shape === 'sphere' && (
-              <NumericInput id="geom-radius" label="Radius" value={v.r} onChange={r => setValues({ r })} />
-            )}
-          </div>
-        </CardContent>
-      </Card>
+        <div className="space-y-5">
+          {v.shape === 'circle' && (
+            <NumericInput id="geom-radius" label="Radius" value={v.r} onChange={r => setValues({ r })} />
+          )}
+          {v.shape === 'rectangle' && (<>
+            <NumericInput id="geom-width" label="Width" value={v.w} onChange={w => setValues({ w })} />
+            <NumericInput id="geom-height" label="Height" value={v.h} onChange={h => setValues({ h })} />
+          </>)}
+          {v.shape === 'triangle' && (<>
+            <NumericInput id="geom-base" label="Base" value={v.base} onChange={base => setValues({ base })} />
+            <NumericInput id="geom-height" label="Height" value={v.h} onChange={h => setValues({ h })} />
+            <p className="text-xs text-muted-foreground">Optional: enter all three sides to calculate perimeter</p>
+            <NumericInput id="geom-side-a" label="Side a" value={v.a} onChange={a => setValues({ a })} />
+            <NumericInput id="geom-side-b" label="Side b" value={v.b} onChange={b => setValues({ b })} />
+            <NumericInput id="geom-side-c" label="Side c" value={v.c} onChange={c => setValues({ c })} />
+          </>)}
+          {(v.shape === 'cylinder' || v.shape === 'cone') && (<>
+            <NumericInput id="geom-radius" label="Radius" value={v.r} onChange={r => setValues({ r })} />
+            <NumericInput id="geom-height" label="Height" value={v.h} onChange={h => setValues({ h })} />
+          </>)}
+          {v.shape === 'sphere' && (
+            <NumericInput id="geom-radius" label="Radius" value={v.r} onChange={r => setValues({ r })} />
+          )}
+        </div>
+      </InputPanel>
 
-      {/* Right: diagram + results */}
-      <div id="geometry-results" className="space-y-6">
-        <ExportButtons
+      <ResultPanel id="geometry-results">
+        <ResultHero label={primaryLabel} value={fmt(primaryValue)} caption={shapeLabel} />
+
+        {secondaryEntries.length > 0 && (
+          <ResultStats>
+            {secondaryEntries.map(([key, val]) => (
+              <ResultStat key={key} label={RESULT_LABELS[key] ?? key} value={fmt(val)} />
+            ))}
+          </ResultStats>
+        )}
+
+        <ResultActions
           resultsId="geometry-results"
           filename="geometry"
           csvRows={[csvRow]}
-          disabled={!canExport}
+          canExport={canExport}
         />
+
         <Card>
           <CardHeader><CardTitle>Diagram</CardTitle></CardHeader>
           <CardContent>
             <ShapeDiagram shape={v.shape} />
           </CardContent>
         </Card>
+      </ResultPanel>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {resultEntries.map(([key, val]) => (
-            <Card key={key}>
-              <CardHeader>
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {RESULT_LABELS[key] ?? key}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-bold">{fmt(val)}</p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-    </div>
+      <MobileResultBar targetId="geometry-results" value={fmt(primaryValue)} caption={`${shapeLabel.toLowerCase()} ${primaryLabel.toLowerCase()}`} />
+    </CalculatorGrid>
   )
 }

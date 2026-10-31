@@ -316,7 +316,7 @@ test.describe('Geometry Calculator', () => {
   const resultValue = (page: Page, label: string) =>
     page.locator('#geometry-results [data-slot="card"]').filter({
       has: page.locator('[data-slot="card-title"]').getByText(label, { exact: true }),
-    }).locator('p')
+    }).locator('[data-slot="card-content"]')
 
   const RESULT_LABELS: Record<string, string> = {
     area: 'Area',
