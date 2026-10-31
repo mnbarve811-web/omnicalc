@@ -4,7 +4,8 @@ import { useCalculatorUrl, type Schema } from '@/lib/hooks/use-calculator-url'
 import { calculateScientific, type AngleMode, type ScientificInputs } from '@/lib/engine/math'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { ExportButtons } from '@/components/common/ExportButtons'
+import { CalculatorGrid } from '@/components/common/CalculatorLayout'
+import { ResultActions } from '@/components/common/ResultActions'
 
 const ANGLE_MODES: { value: AngleMode; label: string }[] = [
   { value: 'deg', label: 'Degrees' },
@@ -75,31 +76,35 @@ export function ScientificCalculator() {
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[440px_1fr] gap-8">
+    <CalculatorGrid>
+      {/* Hand-built instead of InputPanel so the angle toggle can share the header row and the keypad fits one viewport */}
       <Card>
-        <CardHeader><CardTitle>Expression</CardTitle></CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex gap-2" role="group" aria-label="Angle mode">
+        <CardHeader className="flex flex-wrap items-center justify-between gap-3">
+          <h2 data-slot="card-title" className="text-base font-semibold tracking-[-0.01em]">
+            Expression
+          </h2>
+          <div className="grid grid-cols-2 gap-1 rounded-sm bg-muted p-1" role="group" aria-label="Angle mode">
             {ANGLE_MODES.map(m => (
               <button
                 key={m.value}
                 type="button"
                 aria-pressed={values.angleMode === m.value}
                 onClick={() => setValues({ angleMode: m.value })}
-                className={`flex-1 px-3 py-2 rounded-md text-sm font-medium border transition-colors ${
+                className={`min-h-11 rounded-[4px] px-3 text-sm font-medium transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50 md:min-h-9 ${
                   values.angleMode === m.value
-                    ? 'bg-primary text-primary-foreground border-primary'
-                    : 'bg-background text-foreground border-border hover:bg-muted'
+                    ? 'bg-card text-foreground shadow-[0_1px_2px_rgba(20,27,45,0.12)]'
+                    : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 {m.label}
               </button>
             ))}
           </div>
-
+        </CardHeader>
+        <CardContent className="space-y-4">
           <Input
             aria-label="Expression"
-            className="font-mono text-lg h-12"
+            className="h-12 font-mono text-lg md:h-12 md:text-lg"
             value={values.expression}
             onChange={e => setValues({ expression: e.target.value })}
             onKeyDown={e => { if (e.key === 'Enter') commitResult() }}
@@ -107,19 +112,34 @@ export function ScientificCalculator() {
             spellCheck={false}
           />
 
-          <div className="grid grid-cols-5 gap-2">
+          {/* The display sits inside the calculator so it stays next to the keypad on every screen size */}
+          <div id="scientific-results" className="scroll-mt-20 rounded-sm bg-muted/60 px-4 py-3">
+            <div className="flex items-baseline justify-between gap-3">
+              <p className="text-sm font-medium text-muted-foreground">Result</p>
+              <p className="text-xs text-muted-foreground">
+                Angles in {values.angleMode === 'deg' ? 'degrees' : 'radians'}
+              </p>
+            </div>
+            {result.error !== null ? (
+              <p className="mt-1 text-base font-medium text-destructive" role="alert">{result.error}</p>
+            ) : (
+              <p className="mt-1 text-right text-4xl font-semibold leading-tight tracking-[-0.03em] tabular-nums break-all text-foreground" aria-live="polite">{result.display || '0'}</p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-5 gap-1.5">
             {KEYPAD.map(key => (
               <button
                 key={key.label}
                 type="button"
                 aria-label={key.ariaLabel}
                 onClick={() => pressKey(key)}
-                className={`h-11 rounded-md text-sm font-medium border transition-colors ${
+                className={`h-11 rounded-sm border text-sm md:h-10 font-medium transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:translate-y-px ${
                   'action' in key && key.action === 'equals'
-                    ? 'bg-primary text-primary-foreground border-primary hover:bg-primary/90'
+                    ? 'border-primary bg-primary text-primary-foreground hover:bg-primary/90'
                     : /^[0-9.]$/.test(key.label)
-                      ? 'bg-background text-foreground border-border hover:bg-muted font-mono text-base'
-                      : 'bg-muted text-foreground border-border hover:bg-muted/70'
+                      ? 'border-border bg-card text-base tabular-nums text-foreground hover:bg-muted'
+                      : 'border-transparent bg-secondary text-secondary-foreground hover:bg-muted-foreground/15'
                 }`}
               >
                 {key.label}
@@ -129,9 +149,8 @@ export function ScientificCalculator() {
         </CardContent>
       </Card>
 
-      <div className="space-y-6">
-        <div id="scientific-results" className="space-y-6">
-        <ExportButtons
+      <div className="min-w-0 space-y-4">
+        <ResultActions
           resultsId="scientific-results"
           filename="scientific-calculation"
           csvRows={[{
@@ -139,30 +158,16 @@ export function ScientificCalculator() {
             'Angle mode': values.angleMode === 'deg' ? 'Degrees' : 'Radians',
             Result: result.display,
           }]}
-          disabled={!canExport}
+          canExport={canExport}
         />
-        <Card>
-          <CardHeader><CardTitle>Result</CardTitle></CardHeader>
-          <CardContent>
-            {result.error !== null ? (
-              <p className="text-lg font-medium text-destructive" role="alert">{result.error}</p>
-            ) : (
-              <p className="text-4xl font-bold font-mono break-all" aria-live="polite">{result.display || '0'}</p>
-            )}
-            <p className="text-sm text-muted-foreground mt-2">
-              Angles in {values.angleMode === 'deg' ? 'degrees' : 'radians'}
-            </p>
-          </CardContent>
-        </Card>
-        </div>
 
         <Card>
           <CardHeader><CardTitle>Supported Functions</CardTitle></CardHeader>
           <CardContent>
-            <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
+            <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2.5 text-sm">
               {FUNCTION_REFERENCE.map(row => (
                 <div key={row.syntax} className="contents">
-                  <dt className="font-mono font-medium">{row.syntax}</dt>
+                  <dt className="font-mono font-medium text-foreground">{row.syntax}</dt>
                   <dd className="text-muted-foreground">{row.meaning}</dd>
                 </div>
               ))}
@@ -170,6 +175,6 @@ export function ScientificCalculator() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </CalculatorGrid>
   )
 }
