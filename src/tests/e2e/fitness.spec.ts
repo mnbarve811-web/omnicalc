@@ -159,15 +159,13 @@ test.describe('TDEE calculator', () => {
     await expect(bmrValue(page)).toHaveText(`${fmt(expected.bmr)} cal/day`)
   })
 
-  test.fixme('invalid activity param falls back to moderate', async ({ page }) => {
-    // Bug: TDEE SCHEMA parses activity with a bare cast, so an unknown value reaches the engine and renders NaN
+  test('invalid activity param falls back to moderate', async ({ page }) => {
     await page.goto('/fitness/tdee?activity=bogus')
     const expected = calculateTDEE({ gender: 'male', weightKg: 75, heightCm: 170, ageYears: 30, activityLevel: 'moderate' })
     await expect(goalValue(page, 'Maintain')).toHaveText(fmt(expected.maintain))
   })
 
-  test.fixme('invalid gender param falls back to male', async ({ page }) => {
-    // Bug: TDEE SCHEMA parses gender with a bare cast, so an unknown value silently uses the female formula
+  test('invalid gender param falls back to male', async ({ page }) => {
     await page.goto('/fitness/tdee?gender=bogus')
     const expected = calculateTDEE({ gender: 'male', weightKg: 75, heightCm: 170, ageYears: 30, activityLevel: 'moderate' })
     await expect(bmrValue(page)).toHaveText(`${fmt(expected.bmr)} cal/day`)

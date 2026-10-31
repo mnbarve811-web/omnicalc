@@ -16,12 +16,24 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { ExportButtons } from '@/components/common/ExportButtons'
 
+// Unknown URL values throw so the hook falls back to the default instead of feeding the engine an invalid key
+function parseGender(s: string): GenderBiological {
+  if (s !== 'male' && s !== 'female') throw new Error(`Unknown gender: ${s}`)
+  return s
+}
+
+function parseActivityLevel(s: string): ActivityLevel {
+  const match = ACTIVITY_LABELS.find(a => a.value === s)
+  if (!match) throw new Error(`Unknown activity level: ${s}`)
+  return match.value
+}
+
 const SCHEMA = {
-  gender:        { param: 'gender',   default: 'male' as GenderBiological, parse: s => s as GenderBiological, serialize: s => s },
+  gender:        { param: 'gender',   default: 'male' as GenderBiological, parse: parseGender, serialize: s => s },
   weightKg:      { param: 'weight',   default: 75,   parse: Number, serialize: String },
   heightCm:      { param: 'height',   default: 170,  parse: Number, serialize: String },
   ageYears:      { param: 'age',      default: 30,   parse: Number, serialize: String },
-  activityLevel: { param: 'activity', default: 'moderate' as ActivityLevel, parse: s => s as ActivityLevel, serialize: s => s },
+  activityLevel: { param: 'activity', default: 'moderate' as ActivityLevel, parse: parseActivityLevel, serialize: s => s },
 } as const satisfies Schema<TDEEInputs>
 
 const ACTIVITY_LABELS: { value: ActivityLevel; label: string; description: string }[] = [
