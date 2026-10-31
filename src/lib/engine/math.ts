@@ -121,7 +121,7 @@ function mixedString(numerator: number, denominator: number): string {
   const whole = Math.trunc(numerator / denominator)
   const rem = Math.abs(numerator % denominator)
   if (denominator === 1 || rem === 0) return String(whole)
-  if (whole === 0) return `${Math.abs(numerator)}/${denominator}`
+  if (whole === 0) return `${numerator}/${denominator}`
   return `${whole} ${rem}/${denominator}`
 }
 
@@ -174,7 +174,10 @@ function formatQuadraticRoot(n: number): string {
 }
 
 export function calculateQuadratic({ a, b, c }: QuadraticInputs): QuadraticResult {
-  const discriminant = b * b - 4 * a * c
+  const rawDiscriminant = b * b - 4 * a * c
+  // Decimal coefficients like (x - 0.7)² leave a residue such as -2.2e-16 that should count as zero
+  const tolerance = 1e-12 * Math.max(b * b, Math.abs(4 * a * c))
+  const discriminant = Math.abs(rawDiscriminant) <= tolerance ? 0 : rawDiscriminant
 
   if (a === 0) {
     return { discriminant, roots: [], rootsDisplay: 'Not a quadratic equation (a = 0)' }
@@ -277,8 +280,8 @@ function buildScientificFunctions(angleMode: AngleMode): Record<string, (x: numb
     sin: (x) => snapTiny(Math.sin(toRadians(x))),
     cos: (x) => snapTiny(Math.cos(toRadians(x))),
     tan: (x) => {
-      // Math.tan(π/2) returns 1.6e16 rather than failing, so odd multiples of 90° are caught explicitly
-      if (angleMode === 'deg' && ((x % 180) + 180) % 180 === 90) throw new ScientificError('Result is undefined')
+      // Math.tan(π/2) returns 1.6e16 rather than failing; a cosine that snaps to zero marks those angles
+      if (snapTiny(Math.cos(toRadians(x))) === 0) throw new ScientificError('Result is undefined')
       return snapTiny(Math.tan(toRadians(x)))
     },
     asin: (x) => fromRadians(Math.asin(x)),

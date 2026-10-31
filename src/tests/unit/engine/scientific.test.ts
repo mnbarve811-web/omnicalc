@@ -51,6 +51,13 @@ describe('calculateScientific', () => {
     const r = evalDeg('tan(90)')
     expect(r.value).toBeNull()
     expect(r.error).toMatch(/undefined/i)
+    expect(evalDeg('tan(-270)').error).toMatch(/undefined/i)
+  })
+
+  it('reports tan at π/2 radians as undefined', () => {
+    expect(evalRad('tan(pi / 2)').error).toMatch(/undefined/i)
+    expect(evalRad('tan(3pi / 2)').error).toMatch(/undefined/i)
+    expect(evalRad('tan(pi / 4)').value).toBeCloseTo(1, 12)
   })
 
   it('evaluates logs, roots, and other functions', () => {

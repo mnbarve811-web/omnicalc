@@ -30,4 +30,14 @@ describe('calculateQuadratic', () => {
     expect(r.roots).toHaveLength(0)
     expect(r.rootsDisplay).toContain('a = 0')
   })
+  it('treats a discriminant lost to floating-point error as a repeated root', () => {
+    const r = calculateQuadratic({ a: 1, b: -1.4, c: 0.49 })
+    expect(r.roots).toHaveLength(1)
+    expect(r.roots[0]).toBeCloseTo(0.7, 10)
+    expect(r.discriminant).toBe(0)
+  })
+  it('does not split a repeated decimal root into two', () => {
+    const r = calculateQuadratic({ a: 1, b: -0.2, c: 0.01 })
+    expect(r.roots).toHaveLength(1)
+  })
 })

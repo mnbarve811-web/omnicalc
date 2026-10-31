@@ -36,4 +36,12 @@ describe('calculateFraction', () => {
     const r = calculateFraction({ numerator1:1, denominator1:2, numerator2:0, denominator2:1, operation:'divide' })
     expect(r.denominator).not.toBe(0)
   })
+  it('keeps the minus sign on a negative proper fraction in mixed form', () => {
+    const r = calculateFraction({ numerator1:3, denominator1:4, numerator2:5, denominator2:6, operation:'subtract' })
+    expect(r.mixed).toBe('-1/12')
+  })
+  it('formats a negative improper fraction as a negative mixed number', () => {
+    const r = calculateFraction({ numerator1:-7, denominator1:4, numerator2:0, denominator2:1, operation:'add' })
+    expect(r.mixed).toBe('-1 3/4')
+  })
 })
