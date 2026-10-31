@@ -4,9 +4,12 @@ import { useCalculatorUrl, type Schema } from '@/lib/hooks/use-calculator-url'
 import { calculateAutoLoan, type AutoLoanInputs } from '@/lib/engine/financial'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { ExportButtons } from '@/components/common/ExportButtons'
+import { Field } from '@/components/common/Field'
+import { CalculatorGrid, InputPanel, ResultPanel } from '@/components/common/CalculatorLayout'
+import { ProportionBar, ResultHero, ResultStat, ResultStats, type ProportionSegment } from '@/components/common/Result'
+import { ResultActions } from '@/components/common/ResultActions'
+import { MobileResultBar } from '@/components/common/MobileResultBar'
 
 const SCHEMA = {
   vehiclePrice:   { param: 'price',    default: 30000, parse: Number, serialize: String },
@@ -19,6 +22,8 @@ const SCHEMA = {
 
 const fmt = (n: number) =>
   new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n)
+
+const AXIS_TICK = { fill: 'var(--muted-foreground)', fontSize: 12 }
 
 export function AutoLoanCalculator() {
   const [inputs, setValues] = useCalculatorUrl(SCHEMA)
@@ -36,38 +41,47 @@ export function AutoLoanCalculator() {
 
   const canExport = inputs.vehiclePrice > 0 && inputs.loanTermMonths > 0 && result.loanBalance > 0
 
-  return (
-    <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-8">
-      <Card>
-        <CardHeader><CardTitle>Inputs</CardTitle></CardHeader>
-        <CardContent className="space-y-4">
-          {[
-            { label: 'Vehicle Price', key: 'vehiclePrice' as const, prefix: '$' },
-            { label: 'Down Payment', key: 'downPayment' as const, prefix: '$' },
-            { label: 'Trade-In Value', key: 'tradeInValue' as const, prefix: '$' },
-            { label: 'Annual Interest Rate (%)', key: 'interestRate' as const, suffix: '%' },
-            { label: 'Loan Term (months)', key: 'loanTermMonths' as const },
-            { label: 'Sales Tax Rate (%)', key: 'salesTaxRate' as const, suffix: '%' },
-          ].map(({ label, key, prefix, suffix }) => (
-            <div key={key}>
-              <label className="text-sm font-medium mb-1 block">{label}</label>
-              <div className="relative">
-                {prefix && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{prefix}</span>}
-                <Input
-                  type="number"
-                  value={inputs[key]}
-                  onChange={e => setValues({ [key]: Number(e.target.value) } as Partial<AutoLoanInputs>)}
-                  className={prefix ? 'pl-7' : suffix ? 'pr-7' : ''}
-                />
-                {suffix && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{suffix}</span>}
-              </div>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
+  const loanCost: ProportionSegment[] = result.monthlyPayment > 0
+    ? [
+        { label: 'Principal', value: result.loanBalance, display: fmt(result.loanBalance), colorClass: 'bg-chart-1' },
+        { label: 'Interest', value: result.totalInterestPaid, display: fmt(result.totalInterestPaid), colorClass: 'bg-chart-2' },
+      ]
+    : []
 
-      <div id="auto-loan-results" className="space-y-6">
-        <ExportButtons
+  return (
+    <CalculatorGrid>
+      <InputPanel title="Inputs">
+        {[
+          { label: 'Vehicle Price', key: 'vehiclePrice' as const, prefix: '$' },
+          { label: 'Down Payment', key: 'downPayment' as const, prefix: '$' },
+          { label: 'Trade-In Value', key: 'tradeInValue' as const, prefix: '$' },
+          { label: 'Annual Interest Rate (%)', key: 'interestRate' as const, suffix: '%' },
+          { label: 'Loan Term (months)', key: 'loanTermMonths' as const },
+          { label: 'Sales Tax Rate (%)', key: 'salesTaxRate' as const, suffix: '%' },
+        ].map(({ label, key, prefix, suffix }) => (
+          <Field
+            key={key}
+            label={label}
+            prefix={prefix}
+            suffix={suffix}
+            type="number"
+            value={inputs[key]}
+            onChange={e => setValues({ [key]: Number(e.target.value) } as Partial<AutoLoanInputs>)}
+          />
+        ))}
+      </InputPanel>
+
+      <ResultPanel id="auto-loan-results">
+        <ResultHero label="Monthly Payment" value={fmt(result.monthlyPayment)} caption={`Estimated payment over ${inputs.loanTermMonths} months`}>
+          <ProportionBar label="Principal and interest repaid over the loan" segments={loanCost} />
+        </ResultHero>
+
+        <ResultStats>
+          <ResultStat label="Loan Amount" value={fmt(result.loanBalance)} />
+          <ResultStat label="Total Interest" value={fmt(result.totalInterestPaid)} />
+        </ResultStats>
+
+        <ResultActions
           resultsId="auto-loan-results"
           filename="auto-loan-amortization"
           csvRows={result.amortizationSchedule.map((row) => ({
@@ -77,27 +91,25 @@ export function AutoLoanCalculator() {
             Interest: row.interest.toFixed(2),
             Balance: row.balance.toFixed(2),
           }))}
-          disabled={!canExport}
+          canExport={canExport}
         />
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Card><CardHeader><CardTitle className="text-sm font-medium text-muted-foreground">Monthly Payment</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold">{fmt(result.monthlyPayment)}</p></CardContent></Card>
-          <Card><CardHeader><CardTitle className="text-sm font-medium text-muted-foreground">Loan Amount</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold">{fmt(result.loanBalance)}</p></CardContent></Card>
-          <Card><CardHeader><CardTitle className="text-sm font-medium text-muted-foreground">Total Interest</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold">{fmt(result.totalInterestPaid)}</p></CardContent></Card>
-        </div>
 
         <Card>
           <CardHeader><CardTitle>Principal vs Interest by Year</CardTitle></CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={260}>
-              <AreaChart data={yearlyData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="year" label={{ value: 'Year', position: 'insideBottom', offset: -2 }} />
-                <YAxis tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
-                <Tooltip formatter={(v: number) => fmt(v)} />
-                <Legend />
-                <Area type="monotone" dataKey="principalPaid" stackId="a" stroke="#6366f1" fill="#c7d2fe" name="Principal" />
-                <Area type="monotone" dataKey="interestPaid" stackId="a" stroke="#f59e0b" fill="#fde68a" name="Interest" />
+              <AreaChart data={yearlyData} margin={{ top: 4, right: 16, left: 16, bottom: 4 }}>
+                <CartesianGrid stroke="var(--border)" vertical={false} />
+                <XAxis dataKey="year" tickFormatter={(v: number) => `Yr ${v}`} tick={AXIS_TICK} tickLine={false} axisLine={false} />
+                <YAxis tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} tick={AXIS_TICK} tickLine={false} axisLine={false} />
+                <Tooltip
+                  formatter={(v: number) => fmt(v)}
+                  labelFormatter={(label: number) => `Year ${label}`}
+                  contentStyle={{ borderRadius: 8, border: '1px solid var(--border)', fontSize: 13 }}
+                />
+                <Legend wrapperStyle={{ fontSize: 13 }} />
+                <Area type="monotone" dataKey="principalPaid" stackId="a" stroke="var(--chart-1)" fill="var(--chart-1)" fillOpacity={0.55} name="Principal" />
+                <Area type="monotone" dataKey="interestPaid" stackId="a" stroke="var(--chart-2)" fill="var(--chart-2)" fillOpacity={0.4} name="Interest" />
               </AreaChart>
             </ResponsiveContainer>
           </CardContent>
@@ -130,7 +142,9 @@ export function AutoLoanCalculator() {
             </Table>
           </CardContent>
         </Card>
-      </div>
-    </div>
+      </ResultPanel>
+
+      <MobileResultBar targetId="auto-loan-results" value={fmt(result.monthlyPayment)} caption="per month" />
+    </CalculatorGrid>
   )
 }
