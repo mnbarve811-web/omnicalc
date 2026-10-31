@@ -6,6 +6,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { ExportButtons } from '@/components/common/ExportButtons'
 
 const SCHEMA = {
   initialInvestment:   { param: 'init',   default: 10000, parse: Number, serialize: String },
@@ -27,6 +28,11 @@ export function CompoundInterestCalculator() {
     Contributions: d.contributions,
     Interest: Math.max(0, d.balance - d.contributions),
   }))
+
+  const canExport =
+    inputs.years > 0 &&
+    inputs.compoundFrequency > 0 &&
+    (inputs.initialInvestment > 0 || inputs.monthlyContribution > 0)
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-8">
@@ -59,7 +65,19 @@ export function CompoundInterestCalculator() {
       </Card>
 
       {/* Results */}
-      <div className="space-y-6">
+      <div id="compound-interest-results" className="space-y-6">
+        <ExportButtons
+          resultsId="compound-interest-results"
+          filename="compound-interest-growth"
+          csvRows={result.yearlyBreakdown.map((row) => ({
+            Year: row.year,
+            Balance: row.balance.toFixed(2),
+            'Total Contributed': row.contributions.toFixed(2),
+            'Interest Earned': (row.balance - row.contributions).toFixed(2),
+          }))}
+          disabled={!canExport}
+        />
+
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Card><CardHeader><CardTitle className="text-sm font-medium text-muted-foreground">Future Value</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold">{fmt(result.futureValue)}</p></CardContent></Card>
           <Card><CardHeader><CardTitle className="text-sm font-medium text-muted-foreground">Total Contributions</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold">{fmt(result.totalContributions)}</p></CardContent></Card>
