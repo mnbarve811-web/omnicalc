@@ -10,8 +10,11 @@ test('hub page loads and shows four pillar cards', async ({ page }) => {
 })
 
 test('nav contains Utility link', async ({ page, viewport }) => {
-  // The nav is hidden on mobile (hidden sm:flex); only check on desktop viewports
-  if (viewport && viewport.width < 640) return
   await page.goto('/')
+  if (viewport && viewport.width < 640) {
+    // Nav uses hidden sm:flex — should not be visible on mobile
+    await expect(page.getByRole('navigation')).toBeHidden()
+    return
+  }
   await expect(page.getByRole('navigation').getByText('Utility')).toBeVisible()
 })
