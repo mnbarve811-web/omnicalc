@@ -102,8 +102,37 @@ export interface CompoundInterestResult {
   yearlyBreakdown: CompoundInterestDataPoint[]
 }
 
-export function calculateCompoundInterest(_inputs: CompoundInterestInputs): CompoundInterestResult {
-  throw new Error('Not implemented')
+export function calculateCompoundInterest(inputs: CompoundInterestInputs): CompoundInterestResult {
+  const { initialInvestment, monthlyContribution, annualInterestRate, compoundFrequency, years } = inputs
+
+  const monthlyRate = compoundFrequency > 0 && annualInterestRate > 0
+    ? Math.pow(1 + (annualInterestRate / 100) / compoundFrequency, compoundFrequency / 12) - 1
+    : annualInterestRate / 100 / 12
+
+  const yearlyBreakdown: CompoundInterestDataPoint[] = []
+  let balance = initialInvestment
+  let totalContributions = initialInvestment
+
+  for (let year = 1; year <= years; year++) {
+    for (let _month = 1; _month <= 12; _month++) {
+      balance += monthlyContribution
+      totalContributions += monthlyContribution
+      balance *= (1 + monthlyRate)
+    }
+    yearlyBreakdown.push({
+      year,
+      balance: Math.round(balance * 100) / 100,
+      contributions: totalContributions,
+      interest: Math.round((balance - totalContributions) * 100) / 100,
+    })
+  }
+
+  return {
+    futureValue: Math.round(balance * 100) / 100,
+    totalContributions,
+    totalInterestEarned: Math.round((balance - totalContributions) * 100) / 100,
+    yearlyBreakdown,
+  }
 }
 
 // --- Retirement ---

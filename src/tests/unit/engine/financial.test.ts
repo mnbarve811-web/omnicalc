@@ -47,3 +47,26 @@ describe('calculateMortgage', () => {
     expect(r15.totalInterestPaid).toBeLessThan(r30.totalInterestPaid)
   })
 })
+
+import { calculateCompoundInterest } from '@/lib/engine'
+
+describe('calculateCompoundInterest', () => {
+  it('$10k at 7% annually for 10 years, no contributions', () => {
+    const r = calculateCompoundInterest({ initialInvestment: 10000, monthlyContribution: 0, annualInterestRate: 7, compoundFrequency: 1, years: 10 })
+    // FV = 10000 * (1.07)^10 ≈ 19672
+    expect(r.futureValue).toBeCloseTo(19672, -1)
+    expect(r.totalInterestEarned).toBeCloseTo(9672, -1)
+  })
+
+  it('generates yearly breakdown with correct length', () => {
+    const r = calculateCompoundInterest({ initialInvestment: 1000, monthlyContribution: 100, annualInterestRate: 6, compoundFrequency: 12, years: 5 })
+    expect(r.yearlyBreakdown).toHaveLength(5)
+    expect(r.yearlyBreakdown[4].year).toBe(5)
+  })
+
+  it('zero interest rate returns principal + contributions only', () => {
+    const r = calculateCompoundInterest({ initialInvestment: 1000, monthlyContribution: 100, annualInterestRate: 0, compoundFrequency: 12, years: 10 })
+    expect(r.totalInterestEarned).toBeCloseTo(0, 0)
+    expect(r.futureValue).toBeCloseTo(13000, 0) // 1000 + 100*12*10
+  })
+})
