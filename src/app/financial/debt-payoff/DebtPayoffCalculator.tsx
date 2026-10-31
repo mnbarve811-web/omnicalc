@@ -50,7 +50,8 @@ export function DebtPayoffCalculator() {
   }))
 
   function updateDebt(i: number, field: keyof DebtItem, value: string | number) {
-    setDebts(prev => prev.map((d, idx) => idx === i ? { ...d, [field]: typeof value === 'string' ? value : Number(value) } : d))
+    // Inputs hand back strings; numeric fields must be converted or the engine's `+=` concatenates text
+    setDebts(prev => prev.map((d, idx) => idx === i ? { ...d, [field]: field === 'name' ? value : Number(value) } : d))
   }
 
   function addDebt() {
