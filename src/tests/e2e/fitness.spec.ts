@@ -113,8 +113,8 @@ test.describe('Fitness pillar hub', () => {
 
 test.describe('TDEE calculator', () => {
   const results = (page: Page) => page.locator('#tdee-results')
-  const bmrValue = (page: Page) => cardWithTitle(results(page), 'Basal Metabolic Rate (BMR)').locator('p')
-  const goalValue = (page: Page, title: string) => cardWithTitle(results(page), title).locator('p').first()
+  const bmrValue = (page: Page) => cardWithTitle(results(page), 'Basal Metabolic Rate (BMR)').locator('[data-slot="card-content"]')
+  const goalValue = (page: Page, title: string) => cardWithTitle(results(page), title).locator('[data-slot="card-content"]').first()
 
   test('renders with default result, guide, FAQ, canonical and JSON-LD', async ({ page }) => {
     await page.goto('/fitness/tdee')
