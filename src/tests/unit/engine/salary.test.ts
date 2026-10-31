@@ -47,3 +47,46 @@ describe('calculateSalary', () => {
     expect(r.netPay).toBeCloseTo(BASE.grossPay - fica, 2)
   })
 })
+
+describe('calculateSalary edge cases', () => {
+  it('annualises weekly pay over 52 periods', () => {
+    const r = calculateSalary({ ...BASE, payFrequency: 'weekly' })
+    expect(r.annualGross).toBe(5000 * 52)
+    expect(r.annualNet).toBeCloseTo(r.netPay * 52, 6)
+  })
+
+  it('annualises semi-monthly pay over 24 periods', () => {
+    const r = calculateSalary({ ...BASE, payFrequency: 'semimonthly' })
+    expect(r.annualGross).toBe(5000 * 24)
+    expect(r.annualNet).toBeCloseTo(r.netPay * 24, 6)
+  })
+
+  it('computes exact per-period amounts for the default example', () => {
+    const r = calculateSalary(BASE)
+    expect(r.federalTax).toBeCloseTo(1100, 6)
+    expect(r.stateTax).toBeCloseTo(250, 6)
+    expect(r.socialSecurity).toBeCloseTo(310, 6)
+    expect(r.medicare).toBeCloseTo(72.5, 6)
+    expect(r.netPay).toBeCloseTo(3067.5, 6)
+  })
+
+  it('zero gross pay leaves only the flat deductions', () => {
+    const r = calculateSalary({ ...BASE, grossPay: 0 })
+    expect(r.federalTax).toBe(0)
+    expect(r.socialSecurity).toBe(0)
+    expect(r.netPay).toBe(-200)
+  })
+
+  it('does not round intermediate amounts', () => {
+    const r = calculateSalary({ ...BASE, grossPay: 1234.56 })
+    expect(r.socialSecurity).toBeCloseTo(76.54272, 8)
+    expect(r.medicare).toBeCloseTo(17.90112, 8)
+  })
+
+  // Bug: payFrequency comes from the URL unchecked, so an unknown value yields NaN annual totals
+  it.todo('an unknown pay frequency does not produce NaN annual totals', () => {
+    const r = calculateSalary({ ...BASE, payFrequency: 'fortnightly' as never })
+    expect(Number.isNaN(r.annualGross)).toBe(false)
+    expect(Number.isNaN(r.annualNet)).toBe(false)
+  })
+})

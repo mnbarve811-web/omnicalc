@@ -50,3 +50,55 @@ describe('calculateCompoundInterest', () => {
     expect(r.futureValue).toBeCloseTo(expected, 0)
   })
 })
+
+describe('calculateCompoundInterest edge cases', () => {
+  it('a zero-year period returns zeros and an empty breakdown', () => {
+    const r = calculateCompoundInterest({ ...BASE, years: 0 })
+    expect(r).toEqual({ futureValue: 0, totalContributions: 0, totalInterestEarned: 0, yearlyBreakdown: [] })
+  })
+
+  it('annual compounding grows a lump sum by exactly the annual rate each year', () => {
+    const r = calculateCompoundInterest({ ...BASE, monthlyContribution: 0, compoundFrequency: 1, years: 1 })
+    expect(r.futureValue).toBeCloseTo(10700, 2)
+  })
+
+  it('more frequent compounding earns more at the same nominal rate', () => {
+    const annual = calculateCompoundInterest({ ...BASE, compoundFrequency: 1 })
+    const monthly = calculateCompoundInterest({ ...BASE, compoundFrequency: 12 })
+    const daily = calculateCompoundInterest({ ...BASE, compoundFrequency: 365 })
+    expect(monthly.futureValue).toBeGreaterThan(annual.futureValue)
+    expect(daily.futureValue).toBeGreaterThan(monthly.futureValue)
+  })
+
+  it('a zero compound frequency falls back to the nominal monthly rate', () => {
+    const zeroFreq = calculateCompoundInterest({ ...BASE, compoundFrequency: 0 })
+    const monthly = calculateCompoundInterest({ ...BASE, compoundFrequency: 12 })
+    expect(zeroFreq.futureValue).toBeCloseTo(monthly.futureValue, 2)
+  })
+
+  it('contributions are added at the start of each month before interest', () => {
+    const r = calculateCompoundInterest({ initialInvestment: 0, monthlyContribution: 100, annualInterestRate: 12, compoundFrequency: 12, years: 1 })
+    const expected = Array.from({ length: 12 }, (_, i) => 100 * Math.pow(1.01, 12 - i)).reduce((a, b) => a + b, 0)
+    expect(r.futureValue).toBeCloseTo(expected, 2)
+  })
+
+  it('yearly contributions rise by 12 monthly contributions per year', () => {
+    const r = calculateCompoundInterest(BASE)
+    r.yearlyBreakdown.forEach((row, i) => {
+      expect(row.contributions).toBe(BASE.initialInvestment + BASE.monthlyContribution * 12 * (i + 1))
+    })
+  })
+
+  it('rounds currency results to cents', () => {
+    const r = calculateCompoundInterest({ ...BASE, annualInterestRate: 6.37 })
+    expect(Math.round(r.futureValue * 100) / 100).toBe(r.futureValue)
+    expect(Math.round(r.totalInterestEarned * 100) / 100).toBe(r.totalInterestEarned)
+    r.yearlyBreakdown.forEach(row => expect(Math.round(row.balance * 100) / 100).toBe(row.balance))
+  })
+
+  it('a zero initial investment still grows contributions', () => {
+    const r = calculateCompoundInterest({ ...BASE, initialInvestment: 0 })
+    expect(r.totalContributions).toBe(500 * 12 * 10)
+    expect(r.totalInterestEarned).toBeGreaterThan(0)
+  })
+})
