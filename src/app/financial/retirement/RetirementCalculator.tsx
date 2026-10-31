@@ -2,7 +2,7 @@
 
 import { useCalculatorUrl, type Schema } from '@/lib/hooks/use-calculator-url'
 import { calculateRetirement, type RetirementInputs } from '@/lib/engine/financial'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { ExportButtons } from '@/components/common/ExportButtons'
