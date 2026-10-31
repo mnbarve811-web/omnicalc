@@ -182,6 +182,53 @@ export interface DebtPayoffResult {
   payoffOrder: string[]   // debt names in order paid off
 }
 
-export function calculateDebtPayoff(_inputs: DebtPayoffInputs): DebtPayoffResult {
-  throw new Error('Not implemented')
+export function calculateDebtPayoff(inputs: DebtPayoffInputs): DebtPayoffResult {
+  const { strategy, extraMonthlyPayment } = inputs
+
+  // Deep copy debts to avoid mutating input
+  let debts = inputs.debts.map(d => ({ ...d }))
+
+  let month = 0
+  let totalInterestPaid = 0
+  const payoffOrder: string[] = []
+  const MAX_MONTHS = 1200 // safety cap
+
+  // Total monthly budget is fixed: all minimums + extra.
+  // The target debt receives the full budget each month;
+  // non-target debts only accrue interest (no payment) until they become the target.
+  const totalBudget = inputs.debts.reduce((sum, d) => sum + d.minimumPayment, 0) + extraMonthlyPayment
+
+  while (debts.length > 0 && month < MAX_MONTHS) {
+    month++
+
+    // Sort by strategy to determine which debt is the current target
+    const sorted = [...debts].sort((a, b) =>
+      strategy === 'snowball'
+        ? a.balance - b.balance
+        : b.interestRate - a.interestRate
+    )
+    const targetName = sorted[0].name
+
+    // Apply interest to all debts; apply full budget only to the target
+    const newDebts: typeof debts = []
+    for (const debt of debts) {
+      const interest = debt.balance * (debt.interestRate / 100 / 12)
+      totalInterestPaid += interest
+      debt.balance += interest
+
+      if (debt.name === targetName) {
+        const payment = Math.min(totalBudget, debt.balance)
+        debt.balance -= payment
+      }
+
+      if (debt.balance <= 0.01) {
+        payoffOrder.push(debt.name)
+      } else {
+        newDebts.push(debt)
+      }
+    }
+    debts = newDebts
+  }
+
+  return { monthsToDebtFree: month, totalInterestPaid, payoffOrder }
 }
