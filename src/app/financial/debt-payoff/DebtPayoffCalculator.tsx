@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { ExportButtons } from '@/components/common/ExportButtons'
 
 const SETTINGS_SCHEMA = {
   strategy:            { param: 'strategy', default: 'avalanche' as DebtPayoffStrategy, parse: s => s as DebtPayoffStrategy, serialize: s => s },
@@ -34,6 +35,19 @@ export function DebtPayoffCalculator() {
     { name: 'Snowball', months: snowball.monthsToDebtFree, interest: snowball.totalInterestPaid },
     { name: 'Avalanche', months: avalanche.monthsToDebtFree, interest: avalanche.totalInterestPaid },
   ]
+
+  const canExport = debts.length > 0 && debts.every(d => d.balance > 0 && d.minimumPayment > 0)
+
+  const csvRows = [
+    { strategy: 'Snowball', result: snowball },
+    { strategy: 'Avalanche', result: avalanche },
+  ].map(({ strategy, result }) => ({
+    Strategy: strategy,
+    Selected: strategy.toLowerCase() === settings.strategy ? 'Yes' : 'No',
+    'Months to Debt-Free': result.monthsToDebtFree,
+    'Total Interest Paid': result.totalInterestPaid.toFixed(2),
+    'Payoff Order': result.payoffOrder.join(' -> '),
+  }))
 
   function updateDebt(i: number, field: keyof DebtItem, value: string | number) {
     setDebts(prev => prev.map((d, idx) => idx === i ? { ...d, [field]: typeof value === 'string' ? value : Number(value) } : d))
@@ -121,30 +135,39 @@ export function DebtPayoffCalculator() {
       </div>
 
       {/* Results */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card><CardHeader><CardTitle className="text-sm font-medium text-muted-foreground">Months to Debt-Free</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold">{selected.monthsToDebtFree}</p></CardContent></Card>
-        <Card><CardHeader><CardTitle className="text-sm font-medium text-muted-foreground">Total Interest Paid</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold">{fmt(selected.totalInterestPaid)}</p></CardContent></Card>
-        <Card><CardHeader><CardTitle className="text-sm font-medium text-muted-foreground">Payoff Order</CardTitle></CardHeader><CardContent><p className="text-sm">{selected.payoffOrder.join(' -> ')}</p></CardContent></Card>
-      </div>
+      <div id="debt-payoff-results" className="space-y-6">
+        <ExportButtons
+          resultsId="debt-payoff-results"
+          filename="debt-payoff-strategy-comparison"
+          csvRows={csvRows}
+          disabled={!canExport}
+        />
 
-      {/* Comparison chart */}
-      <Card>
-        <CardHeader><CardTitle>Strategy Comparison</CardTitle></CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={comparisonData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis yAxisId="left" tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
-              <YAxis yAxisId="right" orientation="right" />
-              <Tooltip formatter={(v: number, name: string) => name === 'interest' ? fmt(v) : `${v} months`} />
-              <Legend />
-              <Bar yAxisId="left" dataKey="interest" name="Total Interest" fill="#ef4444" />
-              <Bar yAxisId="right" dataKey="months" name="Months" fill="#6366f1" />
-            </BarChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <Card><CardHeader><CardTitle className="text-sm font-medium text-muted-foreground">Months to Debt-Free</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold">{selected.monthsToDebtFree}</p></CardContent></Card>
+          <Card><CardHeader><CardTitle className="text-sm font-medium text-muted-foreground">Total Interest Paid</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold">{fmt(selected.totalInterestPaid)}</p></CardContent></Card>
+          <Card><CardHeader><CardTitle className="text-sm font-medium text-muted-foreground">Payoff Order</CardTitle></CardHeader><CardContent><p className="text-sm">{selected.payoffOrder.join(' -> ')}</p></CardContent></Card>
+        </div>
+
+        {/* Comparison chart */}
+        <Card>
+          <CardHeader><CardTitle>Strategy Comparison</CardTitle></CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={comparisonData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis yAxisId="left" tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
+                <YAxis yAxisId="right" orientation="right" />
+                <Tooltip formatter={(v: number, name: string) => name === 'interest' ? fmt(v) : `${v} months`} />
+                <Legend />
+                <Bar yAxisId="left" dataKey="interest" name="Total Interest" fill="#ef4444" />
+                <Bar yAxisId="right" dataKey="months" name="Months" fill="#6366f1" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

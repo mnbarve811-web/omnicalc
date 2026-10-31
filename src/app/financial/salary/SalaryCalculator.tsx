@@ -6,6 +6,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { ExportButtons } from '@/components/common/ExportButtons'
 
 const SCHEMA = {
   grossPay:        { param: 'gross',   default: 5000,     parse: Number, serialize: String },
@@ -38,6 +39,20 @@ export function SalaryCalculator() {
     { name: 'Medicare', value: result.medicare },
     { name: 'Other', value: result.otherDeductions },
   ].filter(d => d.value > 0)
+
+  const canExport = inputs.grossPay > 0
+
+  const csvRows = [
+    { Item: 'Gross Pay (per period)', Amount: result.grossPay.toFixed(2) },
+    { Item: 'Federal Tax', Amount: result.federalTax.toFixed(2) },
+    { Item: 'State Tax', Amount: result.stateTax.toFixed(2) },
+    { Item: 'Social Security (6.2%)', Amount: result.socialSecurity.toFixed(2) },
+    { Item: 'Medicare (1.45%)', Amount: result.medicare.toFixed(2) },
+    { Item: 'Other Deductions', Amount: result.otherDeductions.toFixed(2) },
+    { Item: 'Net Pay (per period)', Amount: result.netPay.toFixed(2) },
+    { Item: 'Annual Gross', Amount: result.annualGross.toFixed(2) },
+    { Item: 'Annual Net', Amount: result.annualNet.toFixed(2) },
+  ]
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-8">
@@ -83,7 +98,14 @@ export function SalaryCalculator() {
         </CardContent>
       </Card>
 
-      <div className="space-y-6">
+      <div id="salary-results" className="space-y-6">
+        <ExportButtons
+          resultsId="salary-results"
+          filename="salary-paycheck-breakdown"
+          csvRows={csvRows}
+          disabled={!canExport}
+        />
+
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Card><CardHeader><CardTitle className="text-sm font-medium text-muted-foreground">Net Pay (per period)</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold text-green-600">{fmt(result.netPay)}</p></CardContent></Card>
           <Card><CardHeader><CardTitle className="text-sm font-medium text-muted-foreground">Annual Gross</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold">{fmt(result.annualGross)}</p></CardContent></Card>

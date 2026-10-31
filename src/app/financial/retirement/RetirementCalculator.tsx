@@ -5,6 +5,7 @@ import { calculateRetirement, type RetirementInputs } from '@/lib/engine/financi
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { ExportButtons } from '@/components/common/ExportButtons'
 
 const SCHEMA = {
   currentAge:      { param: 'age',        default: 30,     parse: Number, serialize: String },
@@ -26,6 +27,11 @@ export function RetirementCalculator() {
     ...result.growthPhase.map(p => ({ ...p, phase: 'Accumulation' })),
     ...result.drawdownPhase.slice(1).map(p => ({ ...p, phase: 'Drawdown' })),
   ]
+
+  const canExport =
+    inputs.currentAge > 0 &&
+    inputs.retirementAge > inputs.currentAge &&
+    (inputs.currentSavings > 0 || inputs.annualSavings > 0)
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-8">
@@ -57,7 +63,18 @@ export function RetirementCalculator() {
         </CardContent>
       </Card>
 
-      <div className="space-y-6">
+      <div id="retirement-results" className="space-y-6">
+        <ExportButtons
+          resultsId="retirement-results"
+          filename="retirement-projection"
+          csvRows={allPoints.map((point) => ({
+            Age: point.age,
+            Phase: point.phase,
+            Balance: point.balance.toFixed(2),
+          }))}
+          disabled={!canExport}
+        />
+
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Card>
             <CardHeader><CardTitle className="text-sm font-medium text-muted-foreground">Balance at Retirement</CardTitle></CardHeader>

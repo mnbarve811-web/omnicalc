@@ -6,6 +6,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { ExportButtons } from '@/components/common/ExportButtons'
 
 const SCHEMA = {
   vehiclePrice:   { param: 'price',    default: 30000, parse: Number, serialize: String },
@@ -32,6 +33,8 @@ export function AutoLoanCalculator() {
       interestPaid: slice.reduce((s, r) => s + r.interest, 0),
     })
   }
+
+  const canExport = inputs.vehiclePrice > 0 && inputs.loanTermMonths > 0 && result.loanBalance > 0
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-8">
@@ -63,7 +66,20 @@ export function AutoLoanCalculator() {
         </CardContent>
       </Card>
 
-      <div className="space-y-6">
+      <div id="auto-loan-results" className="space-y-6">
+        <ExportButtons
+          resultsId="auto-loan-results"
+          filename="auto-loan-amortization"
+          csvRows={result.amortizationSchedule.map((row) => ({
+            Month: row.month,
+            Payment: row.payment.toFixed(2),
+            Principal: row.principal.toFixed(2),
+            Interest: row.interest.toFixed(2),
+            Balance: row.balance.toFixed(2),
+          }))}
+          disabled={!canExport}
+        />
+
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Card><CardHeader><CardTitle className="text-sm font-medium text-muted-foreground">Monthly Payment</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold">{fmt(result.monthlyPayment)}</p></CardContent></Card>
           <Card><CardHeader><CardTitle className="text-sm font-medium text-muted-foreground">Loan Amount</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold">{fmt(result.loanBalance)}</p></CardContent></Card>
