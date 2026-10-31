@@ -13,8 +13,25 @@ export interface DateDiffResult {
   totalDays: number
 }
 
-export function calculateDateDiff(_inputs: DateDiffInputs): DateDiffResult {
-  throw new Error('Not implemented')
+export function calculateDateDiff({ startDate, endDate }: DateDiffInputs): DateDiffResult {
+  const start = new Date(startDate)
+  const end   = new Date(endDate)
+  const [early, late] = start <= end ? [start, end] : [end, start]
+
+  const totalDays = Math.round((late.getTime() - early.getTime()) / (1000 * 60 * 60 * 24))
+
+  let years = late.getFullYear() - early.getFullYear()
+  let tempDate = new Date(early)
+  tempDate.setFullYear(tempDate.getFullYear() + years)
+  if (tempDate > late) { years--; tempDate.setFullYear(tempDate.getFullYear() - 1) }
+
+  let months = late.getMonth() - tempDate.getMonth() + (late.getFullYear() - tempDate.getFullYear()) * 12
+  tempDate.setMonth(tempDate.getMonth() + months)
+  if (tempDate > late) { months--; tempDate.setMonth(tempDate.getMonth() - 1) }
+
+  const days = Math.round((late.getTime() - tempDate.getTime()) / (1000 * 60 * 60 * 24))
+
+  return { years, months, days, totalDays }
 }
 
 // --- Unit Conversion ---
