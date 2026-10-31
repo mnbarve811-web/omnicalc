@@ -14,7 +14,6 @@ const BASE = {
 describe('calculateMortgage', () => {
   it('calculates monthly P&I for standard 30-year mortgage', () => {
     const r = calculateMortgage(BASE)
-    // $240k at 6.5% for 30 years = ~$1,517/mo
     expect(r.monthlyPrincipalAndInterest).toBeCloseTo(1517, 0)
     expect(r.totalPaymentCount).toBe(360)
   })

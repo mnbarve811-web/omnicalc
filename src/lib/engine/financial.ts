@@ -29,9 +29,13 @@ export interface MortgageResult {
 
 export function calculateMortgage(inputs: MortgageInputs): MortgageResult {
   const { homePrice, downPayment, loanTermYears, interestRate, propertyTax, homeInsurance, hoa } = inputs
-  const principal = homePrice - downPayment
+  const principal = Math.max(0, homePrice - downPayment)
   const monthlyRate = interestRate / 100 / 12
   const n = loanTermYears * 12
+
+  if (n === 0) {
+    return { monthlyPrincipalAndInterest: 0, monthlyTotal: 0, totalPaymentCount: 0, totalInterestPaid: 0, amortizationSchedule: [] }
+  }
 
   const monthlyPrincipalAndInterest = monthlyRate === 0
     ? principal / n
