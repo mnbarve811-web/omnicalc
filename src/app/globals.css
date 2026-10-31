@@ -128,3 +128,92 @@
     @apply font-sans;
   }
 }
+@keyframes omni-rise {
+  from {
+    opacity: 0;
+    transform: translateY(4rem);
+    filter: blur(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: blur(0);
+  }
+}
+
+@keyframes omni-rise-on-scroll {
+  from {
+    opacity: 0;
+    transform: translateY(4rem) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes omni-grow {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes omni-marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes omni-caret {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* Without motion the marquee stops, so let people scroll it instead */
+@media (prefers-reduced-motion: reduce) {
+  .omni-marquee-viewport {
+    overflow-x: auto;
+  }
+}
+
+/* Reveals are CSS-only so server-rendered content is never hidden waiting for hydration */
+@media (prefers-reduced-motion: no-preference) {
+  .omni-rise {
+    animation: omni-rise 1000ms cubic-bezier(0.32, 0.72, 0, 1) var(--rise-delay, 0ms) both;
+  }
+
+  .omni-grow {
+    transform-origin: bottom;
+    animation: omni-grow 1200ms cubic-bezier(0.32, 0.72, 0, 1) var(--rise-delay, 0ms) both;
+  }
+
+  /* A marquee needs constant speed, so this is the one place linear timing is intended */
+  .omni-marquee {
+    animation: omni-marquee 70s linear infinite;
+  }
+
+  .omni-marquee:hover,
+  .omni-marquee:focus-within {
+    animation-play-state: paused;
+  }
+
+  .omni-caret {
+    animation: omni-caret 1.1s steps(1) infinite;
+  }
+
+  .omni-rise-on-scroll {
+    animation: omni-rise-on-scroll 900ms cubic-bezier(0.32, 0.72, 0, 1) 360ms both;
+  }
+
+  @supports (animation-timeline: view()) {
+    .omni-rise-on-scroll {
+      animation: omni-rise-on-scroll cubic-bezier(0.32, 0.72, 0, 1) both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 90%;
+    }
+  }
+}
