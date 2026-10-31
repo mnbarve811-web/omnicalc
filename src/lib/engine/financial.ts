@@ -75,8 +75,29 @@ export interface AutoLoanResult {
   amortizationSchedule: AmortizationRow[]
 }
 
-export function calculateAutoLoan(_inputs: AutoLoanInputs): AutoLoanResult {
-  throw new Error('Not implemented')
+export function calculateAutoLoan(inputs: AutoLoanInputs): AutoLoanResult {
+  const { vehiclePrice, downPayment, tradeInValue, interestRate, loanTermMonths, salesTaxRate } = inputs
+  const loanBalance = Math.max(0, vehiclePrice * (1 + salesTaxRate / 100) - downPayment - tradeInValue)
+  const monthlyRate = interestRate / 100 / 12
+  const n = loanTermMonths
+
+  const monthlyPayment = monthlyRate === 0
+    ? loanBalance / n
+    : loanBalance * (monthlyRate * Math.pow(1 + monthlyRate, n)) / (Math.pow(1 + monthlyRate, n) - 1)
+
+  const amortizationSchedule: AmortizationRow[] = []
+  let balance = loanBalance
+  let totalInterestPaid = 0
+
+  for (let month = 1; month <= n; month++) {
+    const interest = balance * monthlyRate
+    const principal = monthlyPayment - interest
+    balance = Math.max(0, balance - principal)
+    totalInterestPaid += interest
+    amortizationSchedule.push({ month, payment: monthlyPayment, principal, interest, balance })
+  }
+
+  return { monthlyPayment, loanBalance, totalInterestPaid, amortizationSchedule }
 }
 
 // --- Compound Interest ---
