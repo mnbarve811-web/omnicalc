@@ -49,4 +49,30 @@ describe('calculatePregnancy', () => {
     expect(calculatePregnancy({ lastMenstrualPeriod: '2024-12-08' })).toMatchObject({ currentWeek: 27, trimester: 2 })
     expect(calculatePregnancy({ lastMenstrualPeriod: '2024-12-01' })).toMatchObject({ currentWeek: 28, trimester: 3 })
   })
+
+  it('LMP today is week 0, trimester 1', () => {
+    expect(calculatePregnancy({ lastMenstrualPeriod: '2025-06-15' })).toMatchObject({ currentWeek: 0, trimester: 1 })
+  })
+
+  it('week increments only after a full 7 days', () => {
+    expect(calculatePregnancy({ lastMenstrualPeriod: '2025-06-09' }).currentWeek).toBe(0)
+    expect(calculatePregnancy({ lastMenstrualPeriod: '2025-06-08' }).currentWeek).toBe(1)
+  })
+
+  it('currentWeek reaches exactly 42 at 294 days', () => {
+    expect(calculatePregnancy({ lastMenstrualPeriod: '2024-08-26' }).currentWeek).toBe(41)
+    expect(calculatePregnancy({ lastMenstrualPeriod: '2024-08-25' })).toMatchObject({ currentWeek: 42, trimester: 3 })
+  })
+
+  it('due date accounts for a leap day', () => {
+    expect(calculatePregnancy({ lastMenstrualPeriod: '2024-02-29' }).dueDate).toBe('2024-12-05')
+    expect(calculatePregnancy({ lastMenstrualPeriod: '2023-12-01' }).dueDate).toBe('2024-09-06')
+  })
+
+  it('week uses the local calendar date, not the time of day', () => {
+    vi.setSystemTime(new Date(2025, 5, 15, 23, 59, 0))
+    expect(calculatePregnancy({ lastMenstrualPeriod: '2025-06-08' }).currentWeek).toBe(1)
+    vi.setSystemTime(new Date(2025, 5, 15, 0, 1, 0))
+    expect(calculatePregnancy({ lastMenstrualPeriod: '2025-06-08' }).currentWeek).toBe(1)
+  })
 })
