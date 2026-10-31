@@ -2,9 +2,11 @@
 
 import { useCalculatorUrl, type Schema } from '@/lib/hooks/use-calculator-url'
 import { calculateDateDiff, type DateDiffInputs } from '@/lib/engine/utility'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { ExportButtons } from '@/components/common/ExportButtons'
+import { Field } from '@/components/common/Field'
+import { CalculatorGrid, InputPanel, ResultPanel } from '@/components/common/CalculatorLayout'
+import { ResultHero, ResultStat, ResultStats } from '@/components/common/Result'
+import { ResultActions } from '@/components/common/ResultActions'
+import { MobileResultBar } from '@/components/common/MobileResultBar'
 
 function today(): string {
   return new Date().toISOString().split('T')[0]
@@ -49,31 +51,49 @@ export function DateDiffCalculator() {
   const canExport = isValidIsoDate(values.startDate as string) && isValidIsoDate(values.endDate as string)
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-8">
-      <Card>
-        <CardHeader><CardTitle>Dates</CardTitle></CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <label className="text-sm font-medium mb-1 block">Start Date</label>
-            <Input
-              type="date"
-              value={values.startDate as string}
-              onChange={e => setValues({ startDate: e.target.value } as Partial<DateDiffInputs & Record<string, unknown>>)}
-            />
-          </div>
-          <div>
-            <label className="text-sm font-medium mb-1 block">End Date</label>
-            <Input
-              type="date"
-              value={values.endDate as string}
-              onChange={e => setValues({ endDate: e.target.value } as Partial<DateDiffInputs & Record<string, unknown>>)}
-            />
-          </div>
-        </CardContent>
-      </Card>
+    <CalculatorGrid>
+      <InputPanel title="Dates">
+        <Field
+          label="Start Date"
+          type="date"
+          value={values.startDate as string}
+          onChange={e => setValues({ startDate: e.target.value } as Partial<DateDiffInputs & Record<string, unknown>>)}
+        />
+        <Field
+          label="End Date"
+          type="date"
+          value={values.endDate as string}
+          onChange={e => setValues({ endDate: e.target.value } as Partial<DateDiffInputs & Record<string, unknown>>)}
+        />
+      </InputPanel>
 
-      <div id="date-diff-results" className="space-y-6">
-        <ExportButtons
+      <ResultPanel id="date-diff-results">
+        <ResultHero
+          label="Total Days"
+          value={result.totalDays.toLocaleString()}
+          caption={
+            <p>
+              From{' '}
+              <span className="text-foreground font-medium">{formatDate(values.startDate as string)}</span>
+              {' '}to{' '}
+              <span className="text-foreground font-medium">{formatDate(values.endDate as string)}</span>
+              {' '}is{' '}
+              <span className="text-foreground font-medium">{result.years} year{result.years !== 1 ? 's' : ''}</span>
+              {', '}
+              <span className="text-foreground font-medium">{result.months} month{result.months !== 1 ? 's' : ''}</span>
+              {', and '}
+              <span className="text-foreground font-medium">{result.days} day{result.days !== 1 ? 's' : ''}</span>.
+            </p>
+          }
+        />
+
+        <ResultStats>
+          <ResultStat label="Years" value={result.years.toLocaleString()} />
+          <ResultStat label="Months" value={result.months.toLocaleString()} />
+          <ResultStat label="Days" value={result.days.toLocaleString()} />
+        </ResultStats>
+
+        <ResultActions
           resultsId="date-diff-results"
           filename="date-difference"
           csvRows={[{
@@ -84,39 +104,11 @@ export function DateDiffCalculator() {
             Days: result.days,
             'Total Days': result.totalDays,
           }]}
-          disabled={!canExport}
+          canExport={canExport}
         />
-        <div className="grid grid-cols-2 gap-4">
-          {[
-            { label: 'Years',      value: result.years },
-            { label: 'Months',     value: result.months },
-            { label: 'Days',       value: result.days },
-            { label: 'Total Days', value: result.totalDays },
-          ].map(({ label, value }) => (
-            <Card key={label}>
-              <CardHeader>
-                <CardTitle className="text-sm font-medium text-muted-foreground">{label}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-3xl font-bold">{value.toLocaleString()}</p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+      </ResultPanel>
 
-        <p className="text-muted-foreground">
-          From{' '}
-          <span className="text-foreground font-medium">{formatDate(values.startDate as string)}</span>
-          {' '}to{' '}
-          <span className="text-foreground font-medium">{formatDate(values.endDate as string)}</span>
-          {' '}is{' '}
-          <span className="text-foreground font-medium">{result.years} year{result.years !== 1 ? 's' : ''}</span>
-          {', '}
-          <span className="text-foreground font-medium">{result.months} month{result.months !== 1 ? 's' : ''}</span>
-          {', and '}
-          <span className="text-foreground font-medium">{result.days} day{result.days !== 1 ? 's' : ''}</span>.
-        </p>
-      </div>
-    </div>
+      <MobileResultBar targetId="date-diff-results" value={result.totalDays.toLocaleString()} caption="days between the dates" />
+    </CalculatorGrid>
   )
 }

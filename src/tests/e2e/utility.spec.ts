@@ -225,7 +225,7 @@ test.describe('Date Calculator', () => {
   const resultCard = (page: Page, label: string) =>
     page.locator('#date-diff-results [data-slot="card"]').filter({
       has: page.locator('[data-slot="card-title"]').getByText(label, { exact: true }),
-    }).locator('p')
+    }).locator('[data-slot="card-content"]')
 
   async function expectBreakdown(page: Page, startDate: string, endDate: string) {
     const expected = calculateDateDiff({ startDate, endDate })
