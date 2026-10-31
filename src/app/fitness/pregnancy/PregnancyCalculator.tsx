@@ -2,9 +2,11 @@
 
 import { useCalculatorUrl, type Schema } from '@/lib/hooks/use-calculator-url'
 import { calculatePregnancy, type PregnancyInputs } from '@/lib/engine/fitness'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { ExportButtons } from '@/components/common/ExportButtons'
+import { Field } from '@/components/common/Field'
+import { CalculatorGrid, InputPanel, ResultPanel } from '@/components/common/CalculatorLayout'
+import { ResultHero, ResultStat, ResultStats } from '@/components/common/Result'
+import { ResultActions } from '@/components/common/ResultActions'
+import { MobileResultBar } from '@/components/common/MobileResultBar'
 
 function tenWeeksAgo(): string {
   const now = new Date()
@@ -28,11 +30,11 @@ function formatDate(isoDate: string): string {
 }
 
 const TRIMESTER_LABELS = ['1st Trimester', '2nd Trimester', '3rd Trimester'] as const
-const TRIMESTER_COLORS = ['bg-pink-400', 'bg-purple-400', 'bg-indigo-400'] as const
+const TRIMESTER_COLORS = ['bg-chart-1/30', 'bg-chart-1/60', 'bg-chart-1'] as const
 const TRIMESTER_RANGES = [
-  { label: '1st Trimester', weeks: 'Wks 1–12', start: 0, end: 12 },
-  { label: '2nd Trimester', weeks: 'Wks 13–27', start: 13, end: 27 },
-  { label: '3rd Trimester', weeks: 'Wks 28–40', start: 28, end: 40 },
+  { label: '1st Trimester', weeks: 'Wks 1–12', width: '30%' },
+  { label: '2nd Trimester', weeks: 'Wks 13–27', width: '37.5%' },
+  { label: '3rd Trimester', weeks: 'Wks 28–40', width: '32.5%' },
 ]
 
 export function PregnancyCalculator() {
@@ -50,33 +52,59 @@ export function PregnancyCalculator() {
   const canExport = /^\d{4}-\d{2}-\d{2}$/.test(lmp) && !isNaN(Date.parse(lmp))
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-8">
-      {/* Left column: input */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Last Menstrual Period</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-1" htmlFor="lmp-input">
-              Date of LMP
-            </label>
-            <Input
-              id="lmp-input"
-              type="date"
-              value={values.lastMenstrualPeriod}
-              onChange={(e) => setValues({ lastMenstrualPeriod: e.target.value })}
-            />
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Calculated using Naegele&apos;s Rule: LMP + 280 days.
-          </p>
-        </CardContent>
-      </Card>
+    <CalculatorGrid>
+      <InputPanel title="Last Menstrual Period">
+        <Field
+          id="lmp-input"
+          label="Date of LMP"
+          type="date"
+          value={values.lastMenstrualPeriod}
+          onChange={(e) => setValues({ lastMenstrualPeriod: e.target.value })}
+          hint="Calculated using Naegele's Rule: LMP + 280 days."
+        />
+      </InputPanel>
 
-      {/* Right column: results */}
-      <div id="pregnancy-results" className="space-y-6">
-        <ExportButtons
+      <ResultPanel id="pregnancy-results">
+        <ResultHero label="Due Date" value={formatDate(dueDate)} caption="Estimated from the first day of your last period">
+          <figure aria-label={`Pregnancy progress: week ${currentWeek} of 40`} className="relative pt-3">
+            <div aria-hidden className="flex h-3 gap-0.5 overflow-hidden rounded-full">
+              {TRIMESTER_RANGES.map((t, i) => (
+                <div key={t.label} className={`${TRIMESTER_COLORS[i]} h-full`} style={{ width: t.width }} />
+              ))}
+            </div>
+            <div
+              aria-hidden
+              className="absolute top-0 -translate-x-1/2 transition-[left] duration-300 ease-out motion-reduce:transition-none"
+              style={{ left: `${markerPct}%` }}
+            >
+              <div className="h-0 w-0 border-l-[6px] border-r-[6px] border-t-[8px] border-l-transparent border-r-transparent border-t-foreground" />
+            </div>
+            <div aria-hidden className="relative mt-2 h-4 text-xs font-semibold tabular-nums text-foreground">
+              <div
+                className={`absolute ${markerPct < 8 ? '' : markerPct > 92 ? '-translate-x-full' : '-translate-x-1/2'}`}
+                style={{ left: `${markerPct}%` }}
+              >
+                Wk {currentWeek}
+              </div>
+            </div>
+            <ul className="mt-4 flex flex-wrap gap-x-5 gap-y-1.5 text-sm">
+              {TRIMESTER_RANGES.map((t, i) => (
+                <li key={t.label} className="flex items-center gap-2">
+                  <div aria-hidden className={`h-2.5 w-2.5 shrink-0 rounded-[3px] ${TRIMESTER_COLORS[i]}`} />
+                  <div className="text-foreground">{t.label}</div>
+                  <div className="text-muted-foreground">({t.weeks})</div>
+                </li>
+              ))}
+            </ul>
+          </figure>
+        </ResultHero>
+
+        <ResultStats>
+          <ResultStat label="Current Week" value={`Week ${currentWeek} of 40`} />
+          <ResultStat label="Trimester" value={TRIMESTER_LABELS[trimester - 1]} />
+        </ResultStats>
+
+        <ResultActions
           resultsId="pregnancy-results"
           filename="pregnancy-due-date"
           csvRows={[
@@ -85,92 +113,11 @@ export function PregnancyCalculator() {
             { Milestone: 'Current Week',          Value: `Week ${currentWeek} of 40` },
             { Milestone: 'Current Trimester',     Value: TRIMESTER_LABELS[trimester - 1] },
           ]}
-          disabled={!canExport}
+          canExport={canExport}
         />
+      </ResultPanel>
 
-        {/* Summary cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Due Date</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">{formatDate(dueDate)}</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Current Week</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">Week {currentWeek} of 40</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Trimester</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <span className={`inline-block px-3 py-1 rounded-full text-white text-sm font-semibold ${TRIMESTER_COLORS[trimester - 1]}`}>
-                {TRIMESTER_LABELS[trimester - 1]}
-              </span>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Progress bar */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Pregnancy Progress</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {/* 3-segment bar */}
-            <div className="relative h-8 flex rounded-full overflow-hidden mb-3">
-              {/* Segment 1: weeks 1-12 = 12/40 = 30% */}
-              <div className="h-full bg-pink-400 flex items-center justify-center text-white text-xs font-medium" style={{ width: '30%' }}>
-                Wks 1–12
-              </div>
-              {/* Segment 2: weeks 13-27 = 15/40 = 37.5% */}
-              <div className="h-full bg-purple-400 flex items-center justify-center text-white text-xs font-medium" style={{ width: '37.5%' }}>
-                Wks 13–27
-              </div>
-              {/* Segment 3: weeks 28-40 = 13/40 = 32.5% */}
-              <div className="h-full bg-indigo-400 flex items-center justify-center text-white text-xs font-medium" style={{ width: '32.5%' }}>
-                Wks 28–40
-              </div>
-            </div>
-
-            {/* Marker line */}
-            <div className="relative h-4 mb-1">
-              <div
-                className="absolute top-0 w-0.5 h-4 bg-gray-800 rounded"
-                style={{ left: `calc(${markerPct}% - 1px)` }}
-              />
-            </div>
-            <div className="relative h-5">
-              <span
-                className="absolute text-xs font-semibold text-gray-700 -translate-x-1/2"
-                style={{ left: `${markerPct}%` }}
-              >
-                Wk {currentWeek}
-              </span>
-            </div>
-
-            {/* Legend */}
-            <div className="flex flex-wrap gap-4 mt-4">
-              {TRIMESTER_RANGES.map((t, i) => (
-                <div key={t.label} className="flex items-center gap-1.5 text-sm">
-                  <span className={`inline-block w-3 h-3 rounded-sm ${TRIMESTER_COLORS[i]}`} />
-                  <span>{t.label}</span>
-                  <span className="text-muted-foreground">({t.weeks})</span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+      <MobileResultBar targetId="pregnancy-results" value={formatDate(dueDate)} caption="estimated" />
+    </CalculatorGrid>
   )
 }
