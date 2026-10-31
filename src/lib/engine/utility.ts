@@ -21,7 +21,7 @@ export function calculateDateDiff({ startDate, endDate }: DateDiffInputs): DateD
   const totalDays = Math.round((late.getTime() - early.getTime()) / (1000 * 60 * 60 * 24))
 
   let years = late.getFullYear() - early.getFullYear()
-  let tempDate = new Date(early)
+  const tempDate = new Date(early)
   tempDate.setFullYear(tempDate.getFullYear() + years)
   if (tempDate > late) { years--; tempDate.setFullYear(tempDate.getFullYear() - 1) }
 
