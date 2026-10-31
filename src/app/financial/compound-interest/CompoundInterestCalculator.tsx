@@ -1,110 +1,114 @@
 'use client'
 
 import { useCalculatorUrl, type Schema } from '@/lib/hooks/use-calculator-url'
-import { calculateCompoundInterest, type CompoundInterestInputs } from '@/lib/engine'
-import { Input } from '@/components/ui/input'
-import { Slider } from '@/components/ui/slider'
+import { calculateCompoundInterest, type CompoundInterestInputs } from '@/lib/engine/financial'
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { Input } from '@/components/ui/input'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
 const SCHEMA = {
-  initialInvestment:   { param: 'init',  default: 10000, parse: Number, serialize: String },
-  monthlyContribution: { param: 'mo',    default: 200,   parse: Number, serialize: String },
-  annualInterestRate:  { param: 'rate',  default: 7,     parse: Number, serialize: String },
-  compoundFrequency:   { param: 'freq',  default: 12,    parse: Number, serialize: String },
-  years:               { param: 'yrs',   default: 20,    parse: Number, serialize: String },
-} satisfies Schema<CompoundInterestInputs>
+  initialInvestment:   { param: 'init',   default: 10000, parse: Number, serialize: String },
+  monthlyContribution: { param: 'monthly', default: 500,  parse: Number, serialize: String },
+  annualInterestRate:  { param: 'rate',    default: 7,    parse: Number, serialize: String },
+  compoundFrequency:   { param: 'freq',    default: 12,   parse: Number, serialize: String },
+  years:               { param: 'years',   default: 20,   parse: Number, serialize: String },
+} as const satisfies Schema<CompoundInterestInputs>
 
-const fmt = (n: number) => n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
-
-function sliderVal(v: number | readonly number[]): number {
-  return Array.isArray(v) ? (v as number[])[0] : (v as number)
-}
-
-const FREQ_OPTIONS = [
-  { label: 'Annually', value: 1 },
-  { label: 'Quarterly', value: 4 },
-  { label: 'Monthly', value: 12 },
-  { label: 'Daily', value: 365 },
-]
+const fmt = (n: number) =>
+  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n)
 
 export function CompoundInterestCalculator() {
-  const [values, setValues] = useCalculatorUrl(SCHEMA)
-  const result = calculateCompoundInterest(values)
+  const [inputs, setValues] = useCalculatorUrl(SCHEMA)
+  const result = calculateCompoundInterest(inputs)
+
+  const chartData = result.yearlyBreakdown.map(d => ({
+    year: d.year,
+    Contributions: d.contributions,
+    Interest: Math.max(0, d.balance - d.contributions),
+  }))
 
   return (
-    <div className="space-y-8">
+    <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-8">
+      {/* Inputs */}
       <Card>
-        <CardHeader><CardTitle>Investment Details</CardTitle></CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Initial Investment: {fmt(values.initialInvestment)}</label>
-            <Slider min={0} max={500000} step={1000} value={[values.initialInvestment]}
-              onValueChange={(v) => setValues({ initialInvestment: sliderVal(v) })} />
-            <Input type="number" value={values.initialInvestment}
-              onChange={e => setValues({ initialInvestment: Number(e.target.value) || 0 })} />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Monthly Contribution: {fmt(values.monthlyContribution)}</label>
-            <Slider min={0} max={5000} step={50} value={[values.monthlyContribution]}
-              onValueChange={(v) => setValues({ monthlyContribution: sliderVal(v) })} />
-            <Input type="number" value={values.monthlyContribution}
-              onChange={e => setValues({ monthlyContribution: Number(e.target.value) || 0 })} />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Annual Interest Rate: {values.annualInterestRate}%</label>
-            <Slider min={0} max={20} step={0.25} value={[values.annualInterestRate]}
-              onValueChange={(v) => setValues({ annualInterestRate: sliderVal(v) })} />
-            <Input type="number" step="0.25" value={values.annualInterestRate}
-              onChange={e => setValues({ annualInterestRate: Number(e.target.value) || 0 })} />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Compounding Frequency</label>
-            <Tabs value={String(values.compoundFrequency)} onValueChange={v => setValues({ compoundFrequency: Number(v) })}>
-              <TabsList>
-                {FREQ_OPTIONS.map(o => <TabsTrigger key={o.value} value={String(o.value)}>{o.label}</TabsTrigger>)}
-              </TabsList>
-            </Tabs>
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Time Period: {values.years} years</label>
-            <Slider min={1} max={50} step={1} value={[values.years]}
-              onValueChange={(v) => setValues({ years: sliderVal(v) })} />
-          </div>
+        <CardHeader><CardTitle>Inputs</CardTitle></CardHeader>
+        <CardContent className="space-y-4">
+          {[
+            { label: 'Initial Investment', key: 'initialInvestment' as const, prefix: '$' },
+            { label: 'Monthly Contribution', key: 'monthlyContribution' as const, prefix: '$' },
+            { label: 'Annual Interest Rate (%)', key: 'annualInterestRate' as const, suffix: '%' },
+            { label: 'Compound Frequency (per year)', key: 'compoundFrequency' as const },
+            { label: 'Time Period (years)', key: 'years' as const },
+          ].map(({ label, key, prefix, suffix }) => (
+            <div key={key}>
+              <label className="text-sm font-medium mb-1 block">{label}</label>
+              <div className="relative">
+                {prefix && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{prefix}</span>}
+                <Input
+                  type="number"
+                  value={inputs[key]}
+                  onChange={e => setValues({ [key]: Number(e.target.value) } as Partial<CompoundInterestInputs>)}
+                  className={prefix ? 'pl-7' : suffix ? 'pr-7' : ''}
+                />
+                {suffix && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{suffix}</span>}
+              </div>
+            </div>
+          ))}
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        {[
-          { label: 'Future Value', value: fmt(result.futureValue) },
-          { label: 'Total Contributions', value: fmt(result.totalContributions) },
-          { label: 'Total Interest Earned', value: fmt(result.totalInterestEarned) },
-        ].map(({ label, value }) => (
-          <Card key={label}>
-            <CardContent className="pt-6">
-              <p className="text-sm text-muted-foreground">{label}</p>
-              <p className="text-2xl font-bold">{value}</p>
-            </CardContent>
-          </Card>
-        ))}
+      {/* Results */}
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <Card><CardHeader><CardTitle className="text-sm font-medium text-muted-foreground">Future Value</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold">{fmt(result.futureValue)}</p></CardContent></Card>
+          <Card><CardHeader><CardTitle className="text-sm font-medium text-muted-foreground">Total Contributions</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold">{fmt(result.totalContributions)}</p></CardContent></Card>
+          <Card><CardHeader><CardTitle className="text-sm font-medium text-muted-foreground">Interest Earned</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold text-green-600">{fmt(result.totalInterestEarned)}</p></CardContent></Card>
+        </div>
+
+        <Card>
+          <CardHeader><CardTitle>Growth Over Time</CardTitle></CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={280}>
+              <AreaChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="year" label={{ value: 'Year', position: 'insideBottom', offset: -2 }} />
+                <YAxis tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
+                <Tooltip formatter={(v: number) => fmt(v)} />
+                <Legend />
+                <Area type="monotone" dataKey="Contributions" stackId="a" stroke="#6366f1" fill="#c7d2fe" />
+                <Area type="monotone" dataKey="Interest" stackId="a" stroke="#10b981" fill="#a7f3d0" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle>Yearly Breakdown</CardTitle></CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Year</TableHead>
+                  <TableHead className="text-right">Balance</TableHead>
+                  <TableHead className="text-right">Total Contributed</TableHead>
+                  <TableHead className="text-right">Interest Earned</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {result.yearlyBreakdown.map(row => (
+                  <TableRow key={row.year}>
+                    <TableCell>{row.year}</TableCell>
+                    <TableCell className="text-right">{fmt(row.balance)}</TableCell>
+                    <TableCell className="text-right">{fmt(row.contributions)}</TableCell>
+                    <TableCell className="text-right">{fmt(row.balance - row.contributions)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       </div>
-
-      <Card>
-        <CardHeader><CardTitle>Growth Over Time</CardTitle></CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={result.yearlyBreakdown}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="year" label={{ value: 'Year', position: 'insideBottom', offset: -5 }} />
-              <YAxis tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
-              <Tooltip formatter={(v: number) => fmt(v)} />
-              <Area type="monotone" dataKey="contributions" stackId="1" stroke="#64748b" fill="#e2e8f0" name="Contributions" />
-              <Area type="monotone" dataKey="interest" stackId="1" stroke="#16a34a" fill="#dcfce7" name="Interest Earned" />
-            </AreaChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
     </div>
   )
 }
