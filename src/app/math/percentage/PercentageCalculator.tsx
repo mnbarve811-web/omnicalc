@@ -2,9 +2,11 @@
 
 import { useCalculatorUrl, type Schema } from '@/lib/hooks/use-calculator-url'
 import { calculatePercentage, type PercentageInputs, type PercentageMode } from '@/lib/engine/math'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { ExportButtons } from '@/components/common/ExportButtons'
+import { Field } from '@/components/common/Field'
+import { CalculatorGrid, InputPanel, ResultPanel } from '@/components/common/CalculatorLayout'
+import { ResultHero } from '@/components/common/Result'
+import { ResultActions } from '@/components/common/ResultActions'
+import { MobileResultBar } from '@/components/common/MobileResultBar'
 
 const MODES: { value: PercentageMode; label: string }[] = [
   { value: 'whatIsXPercentOfY', label: 'X% of Y' },
@@ -47,52 +49,34 @@ export function PercentageCalculator() {
   const modeLabel = MODES.find(m => m.value === values.mode)?.label ?? values.mode
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-8">
-      <Card>
-        <CardHeader><CardTitle>Inputs</CardTitle></CardHeader>
-        <CardContent className="space-y-6">
-          <div className="flex gap-2" role="group" aria-label="Calculation mode">
-            {MODES.map(m => (
-              <button
-                key={m.value}
-                type="button"
-                aria-pressed={values.mode === m.value}
-                onClick={() => setValues({ mode: m.value })}
-                className={`flex-1 px-3 py-2 rounded-md text-sm font-medium border transition-colors ${
-                  values.mode === m.value
-                    ? 'bg-primary text-primary-foreground border-primary'
-                    : 'bg-background text-foreground border-border hover:bg-muted'
-                }`}
-              >
-                {m.label}
-              </button>
-            ))}
-          </div>
+    <CalculatorGrid>
+      <InputPanel title="Inputs">
+        <div className="grid grid-cols-3 gap-1 rounded-sm bg-muted p-1" role="group" aria-label="Calculation mode">
+          {MODES.map(m => (
+            <button
+              key={m.value}
+              type="button"
+              aria-pressed={values.mode === m.value}
+              onClick={() => setValues({ mode: m.value })}
+              className={`min-h-11 rounded-[4px] px-2 py-1.5 text-sm leading-tight font-medium text-balance transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50 md:min-h-10 ${
+                values.mode === m.value
+                  ? 'bg-card text-foreground shadow-[0_1px_2px_rgba(20,27,45,0.12)]'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
 
-          <div>
-            <label htmlFor="percentage-x" className="text-sm font-medium mb-1 block">{inputLabels.x}</label>
-            <Input
-              id="percentage-x"
-              type="number"
-              value={values.x}
-              onChange={e => setValues({ x: Number(e.target.value) })}
-            />
-          </div>
+        <Field id="percentage-x" label={inputLabels.x} type="number" value={values.x} onChange={e => setValues({ x: Number(e.target.value) })} />
+        <Field id="percentage-y" label={inputLabels.y} type="number" value={values.y} onChange={e => setValues({ y: Number(e.target.value) })} />
+      </InputPanel>
 
-          <div>
-            <label htmlFor="percentage-y" className="text-sm font-medium mb-1 block">{inputLabels.y}</label>
-            <Input
-              id="percentage-y"
-              type="number"
-              value={values.y}
-              onChange={e => setValues({ y: Number(e.target.value) })}
-            />
-          </div>
-        </CardContent>
-      </Card>
+      <ResultPanel id="percentage-results">
+        <ResultHero label="Result" value={formatResult(values.mode, result.result)} caption={result.label} />
 
-      <div id="percentage-results" className="space-y-6">
-        <ExportButtons
+        <ResultActions
           resultsId="percentage-results"
           filename="percentage-calculation"
           csvRows={[{
@@ -102,16 +86,11 @@ export function PercentageCalculator() {
             Result: formatResult(values.mode, result.result),
             Summary: result.label,
           }]}
-          disabled={!canExport}
+          canExport={canExport}
         />
-        <Card>
-          <CardHeader><CardTitle>Result</CardTitle></CardHeader>
-          <CardContent>
-            <p className="text-5xl font-bold tabular-nums">{formatResult(values.mode, result.result)}</p>
-            <p className="text-muted-foreground mt-3 text-lg">{result.label}</p>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+      </ResultPanel>
+
+      <MobileResultBar targetId="percentage-results" value={formatResult(values.mode, result.result)} caption="answer" />
+    </CalculatorGrid>
   )
 }
