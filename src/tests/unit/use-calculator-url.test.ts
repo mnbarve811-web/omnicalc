@@ -49,7 +49,7 @@ describe('useCalculatorUrl', () => {
       value: {
         param: 'v',
         default: 42,
-        parse: (_s: string): number => { throw new Error('bad input') },
+        parse: (): number => { throw new Error('bad input') },
         serialize: String,
       },
     }
