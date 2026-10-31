@@ -240,8 +240,34 @@ export interface SalaryResult {
   annualNet: number
 }
 
-export function calculateSalary(_inputs: SalaryInputs): SalaryResult {
-  throw new Error('Not implemented')
+export function calculateSalary(inputs: SalaryInputs): SalaryResult {
+  const { grossPay, payFrequency, federalTaxRate, stateTaxRate, otherDeductions } = inputs
+
+  const periodsPerYear: Record<PayFrequency, number> = {
+    weekly: 52,
+    biweekly: 26,
+    semimonthly: 24,
+    monthly: 12,
+  }
+
+  const federalTax = grossPay * (federalTaxRate / 100)
+  const stateTax = grossPay * (stateTaxRate / 100)
+  const socialSecurity = grossPay * 0.062
+  const medicare = grossPay * 0.0145
+  const netPay = grossPay - federalTax - stateTax - socialSecurity - medicare - otherDeductions
+  const periods = periodsPerYear[payFrequency]
+
+  return {
+    grossPay,
+    federalTax,
+    socialSecurity,
+    medicare,
+    stateTax,
+    otherDeductions,
+    netPay,
+    annualGross: grossPay * periods,
+    annualNet: netPay * periods,
+  }
 }
 
 // --- Debt Payoff ---
