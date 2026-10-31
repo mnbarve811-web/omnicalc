@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useCalculatorUrl, type Schema } from '@/lib/hooks/use-calculator-url'
 import { calculateStatistics } from '@/lib/engine/math'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ExportButtons } from '@/components/common/ExportButtons'
@@ -21,8 +21,12 @@ function fmt(n: number): string {
   return Number.isInteger(n) ? String(n) : n.toFixed(4).replace(/\.?0+$/, '')
 }
 
+const SCHEMA = {
+  raw: { param: 'data', default: '2, 4, 4, 4, 5, 5, 7, 9', parse: String, serialize: String },
+} as const satisfies Schema<{ raw: string }>
+
 export function StatisticsCalculator() {
-  const [raw, setRaw] = useState('2, 4, 4, 4, 5, 5, 7, 9')
+  const [{ raw }, setValues] = useCalculatorUrl<{ raw: string }>(SCHEMA)
 
   const values = parseValues(raw)
   const result = values.length >= 1 ? calculateStatistics({ values }) : null
@@ -62,7 +66,7 @@ export function StatisticsCalculator() {
             className="w-full min-h-[80px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-y"
             placeholder="e.g. 1, 2, 3, 4, 5 or one number per line"
             value={raw}
-            onChange={e => setRaw(e.target.value)}
+            onChange={e => setValues({ raw: e.target.value })}
           />
           {values.length === 0 && raw.trim() !== '' && (
             <p className="text-sm text-destructive mt-1">No valid numbers found.</p>

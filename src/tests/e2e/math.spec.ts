@@ -160,8 +160,7 @@ test.describe('Statistics calculator', () => {
     await expectExportDisabled(page)
   })
 
-  test.fixme('reflects the dataset in the URL query', async ({ page }) => {
-    // Statistics keeps its dataset in local state only (no useCalculatorUrl), so it cannot be bookmarked or shared
+  test('reflects the dataset in the URL query', async ({ page }) => {
     await visit(page, '/math/statistics')
     await page.locator('textarea').fill('1, 2, 3')
     await expect(page).toHaveURL(/\?.+/)
