@@ -13,25 +13,47 @@ export interface DateDiffResult {
   totalDays: number
 }
 
+const MS_PER_DAY = 1000 * 60 * 60 * 24
+
+interface CalendarDate {
+  year: number
+  month: number   // 0-11
+  day: number
+}
+
+function parseIsoDate(iso: string): CalendarDate {
+  const [year, month, day] = iso.split('-').map(Number)
+  return { year, month: month - 1, day }
+}
+
+function toUtcMs({ year, month, day }: CalendarDate): number {
+  return Date.UTC(year, month, day)
+}
+
+// Oct 31 + 1 month lands on Nov 30, not Dec 1, matching how people count calendar months
+function addMonthsClamped(date: CalendarDate, months: number): number {
+  const monthIndex = date.month + months
+  const year = date.year + Math.floor(monthIndex / 12)
+  const month = ((monthIndex % 12) + 12) % 12
+  const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate()
+  return Date.UTC(year, month, Math.min(date.day, daysInMonth))
+}
+
+// All arithmetic is in UTC: mixing UTC-parsed dates with local-time setters shifted results west of UTC
 export function calculateDateDiff({ startDate, endDate }: DateDiffInputs): DateDiffResult {
-  const start = new Date(startDate)
-  const end   = new Date(endDate)
-  const [early, late] = start <= end ? [start, end] : [end, start]
+  const start = parseIsoDate(startDate)
+  const end = parseIsoDate(endDate)
+  const [early, late] = toUtcMs(start) <= toUtcMs(end) ? [start, end] : [end, start]
+  const lateMs = toUtcMs(late)
 
-  const totalDays = Math.round((late.getTime() - early.getTime()) / (1000 * 60 * 60 * 24))
+  const totalDays = Math.round((lateMs - toUtcMs(early)) / MS_PER_DAY)
 
-  let years = late.getFullYear() - early.getFullYear()
-  const tempDate = new Date(early)
-  tempDate.setFullYear(tempDate.getFullYear() + years)
-  if (tempDate > late) { years--; tempDate.setFullYear(tempDate.getFullYear() - 1) }
+  let totalMonths = (late.year - early.year) * 12 + (late.month - early.month)
+  if (addMonthsClamped(early, totalMonths) > lateMs) totalMonths--
 
-  let months = late.getMonth() - tempDate.getMonth() + (late.getFullYear() - tempDate.getFullYear()) * 12
-  tempDate.setMonth(tempDate.getMonth() + months)
-  if (tempDate > late) { months--; tempDate.setMonth(tempDate.getMonth() - 1) }
+  const days = Math.round((lateMs - addMonthsClamped(early, totalMonths)) / MS_PER_DAY)
 
-  const days = Math.round((late.getTime() - tempDate.getTime()) / (1000 * 60 * 60 * 24))
-
-  return { years, months, days, totalDays }
+  return { years: Math.floor(totalMonths / 12), months: totalMonths % 12, days, totalDays }
 }
 
 // --- Unit Conversion ---
