@@ -45,3 +45,58 @@ describe('calculateFraction', () => {
     expect(r.mixed).toBe('-1 3/4')
   })
 })
+
+describe('calculateFraction signs and simplification', () => {
+  function frac(n1: number, d1: number, op: 'add' | 'subtract' | 'multiply' | 'divide', n2: number, d2: number) {
+    return calculateFraction({ numerator1: n1, denominator1: d1, numerator2: n2, denominator2: d2, operation: op })
+  }
+
+  it('adds a negative and a positive fraction', () => {
+    expect(frac(-1, 2, 'add', 1, 3)).toEqual({ numerator: -1, denominator: 6, decimal: -1 / 6, mixed: '-1/6' })
+  })
+  it('subtracts a negative fraction', () => {
+    expect(frac(1, 2, 'subtract', -1, 4)).toEqual({ numerator: 3, denominator: 4, decimal: 0.75, mixed: '3/4' })
+  })
+  it('multiplies two negatives into a positive', () => {
+    expect(frac(-2, 3, 'multiply', -3, 4)).toEqual({ numerator: 1, denominator: 2, decimal: 0.5, mixed: '1/2' })
+  })
+  it('divides a negative fraction', () => {
+    expect(frac(-1, 2, 'divide', 1, 4)).toEqual({ numerator: -2, denominator: 1, decimal: -2, mixed: '-2' })
+  })
+  it('moves the sign to the numerator when dividing by a negative', () => {
+    const r = frac(1, 2, 'divide', -1, 4)
+    expect(r.numerator).toBe(-2)
+    expect(r.denominator).toBe(1)
+  })
+  it('normalises a negative input denominator', () => {
+    const r = frac(1, -2, 'add', 0, 1)
+    expect(r.numerator).toBe(-1)
+    expect(r.denominator).toBe(2)
+    expect(r.mixed).toBe('-1/2')
+  })
+  it('simplifies a product by the greatest common divisor', () => {
+    const r = frac(6, 8, 'multiply', 4, 6)
+    expect(r.numerator).toBe(1)
+    expect(r.denominator).toBe(2)
+  })
+  it('simplifies a quotient fully', () => {
+    const r = frac(10, 12, 'divide', 15, 18)
+    expect(r.numerator).toBe(1)
+    expect(r.denominator).toBe(1)
+    expect(r.mixed).toBe('1')
+  })
+  it('returns 0/1 when a subtraction cancels out', () => {
+    expect(frac(1, 2, 'subtract', 2, 4)).toEqual({ numerator: 0, denominator: 1, decimal: 0, mixed: '0' })
+  })
+  it('formats a positive improper fraction as a mixed number', () => {
+    const r = frac(7, 3, 'multiply', 1, 1)
+    expect(r.mixed).toBe('2 1/3')
+    expect(r.decimal).toBeCloseTo(7 / 3, 12)
+  })
+  it('formats a whole-number result without a fraction part', () => {
+    expect(frac(3, 2, 'add', 1, 2).mixed).toBe('2')
+  })
+  it('divide by a zero numerator returns 0 with decimal 0', () => {
+    expect(frac(5, 7, 'divide', 0, 3)).toEqual({ numerator: 0, denominator: 1, decimal: 0, mixed: '0' })
+  })
+})
