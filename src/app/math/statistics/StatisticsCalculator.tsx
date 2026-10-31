@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { calculateStatistics } from '@/lib/engine/math'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { ExportButtons } from '@/components/common/ExportButtons'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts'
@@ -47,6 +48,8 @@ export function StatisticsCalculator() {
       ]
     : []
 
+  const canExport = result !== null && values.length >= 1
+
   return (
     <div className="space-y-6">
       <Card>
@@ -66,6 +69,17 @@ export function StatisticsCalculator() {
           )}
         </CardContent>
       </Card>
+
+      <div id="statistics-results" className="space-y-6">
+        <ExportButtons
+          resultsId="statistics-results"
+          filename="statistics-summary"
+          csvRows={[
+            ...stats.map(({ label, value }) => ({ Metric: label, Value: value, Count: '' })),
+            ...chartData.map(({ value, count }) => ({ Metric: 'Frequency', Value: value, Count: count })),
+          ]}
+          disabled={!canExport}
+        />
 
       {result && (
         <>
@@ -102,6 +116,7 @@ export function StatisticsCalculator() {
           )}
         </>
       )}
+      </div>
     </div>
   )
 }

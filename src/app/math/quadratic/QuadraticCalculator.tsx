@@ -4,6 +4,7 @@ import { useCalculatorUrl, type Schema } from '@/lib/hooks/use-calculator-url'
 import { calculateQuadratic, type QuadraticInputs } from '@/lib/engine/math'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { ExportButtons } from '@/components/common/ExportButtons'
 
 const SCHEMA = {
   a: { param: 'a', default: 1,  parse: Number, serialize: String },
@@ -70,6 +71,7 @@ export function QuadraticCalculator() {
     SCHEMA as Schema<QuadraticInputs & Record<string, unknown>>
   )
   const result = calculateQuadratic(values)
+  const canExport = values.a !== 0 && Number.isFinite(values.b) && Number.isFinite(values.c)
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-8">
@@ -107,7 +109,21 @@ export function QuadraticCalculator() {
         </CardContent>
       </Card>
 
-      <div className="space-y-6">
+      <div id="quadratic-results" className="space-y-6">
+        <ExportButtons
+          resultsId="quadratic-results"
+          filename="quadratic-roots"
+          csvRows={[{
+            a: values.a,
+            b: values.b,
+            c: values.c,
+            Discriminant: formatNumber(result.discriminant),
+            'Root 1': result.roots[0] !== undefined ? formatNumber(result.roots[0]) : '',
+            'Root 2': result.roots[1] !== undefined ? formatNumber(result.roots[1]) : '',
+            Roots: result.rootsDisplay,
+          }]}
+          disabled={!canExport}
+        />
         <Card>
           <CardHeader>
             <CardTitle>Roots</CardTitle>
