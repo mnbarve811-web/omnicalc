@@ -119,3 +119,107 @@ describe('calculateScientific', () => {
     expect(evalDeg('1 / 3').display).toBe('0.333333333333')
   })
 })
+
+describe('calculateScientific coverage', () => {
+  it('evaluates nested functions', () => {
+    expect(evalDeg('sqrt(abs(-16))').value).toBe(4)
+    expect(evalDeg('ln(exp(2))').value).toBeCloseTo(2, 12)
+    expect(evalDeg('log(sqrt(10000))').value).toBeCloseTo(2, 12)
+    expect(evalDeg('sin(asin(0.5))').value).toBeCloseTo(0.5, 12)
+    expect(evalDeg('abs(cos(180)) + cbrt(abs(-8))').value).toBeCloseTo(3, 12)
+  })
+
+  it('applies chains of unary operators', () => {
+    expect(evalDeg('--3').value).toBe(3)
+    expect(evalDeg('---1').value).toBe(-1)
+    expect(evalDeg('-+-2').value).toBe(2)
+    expect(evalDeg('+5').value).toBe(5)
+    expect(evalDeg('2 * -3').value).toBe(-6)
+    expect(evalDeg('2^--2').value).toBe(4)
+    expect(evalDeg('-(2 + 3)').value).toBe(-5)
+  })
+
+  it('evaluates every inverse trig function in both angle modes', () => {
+    expect(evalDeg('atan(1)').value).toBeCloseTo(45, 10)
+    expect(evalRad('atan(1)').value).toBeCloseTo(Math.PI / 4, 12)
+    expect(evalDeg('acos(0)').value).toBeCloseTo(90, 10)
+    expect(evalRad('asin(1)').value).toBeCloseTo(Math.PI / 2, 12)
+  })
+
+  it('evaluates tan away from its asymptotes', () => {
+    expect(evalDeg('tan(45)').value).toBeCloseTo(1, 12)
+    expect(evalDeg('tan(180)').display).toBe('0')
+    expect(evalRad('cos(pi)').value).toBe(-1)
+  })
+
+  it('ignores the angle mode for hyperbolic, log, and exponential functions', () => {
+    for (const expression of ['sinh(1)', 'cosh(1)', 'tanh(1)', 'ln(2)', 'log(2)', 'exp(1)']) {
+      expect(evalDeg(expression).value).toBe(evalRad(expression).value)
+    }
+    expect(evalRad('sinh(1)').value).toBeCloseTo(Math.sinh(1), 12)
+    expect(evalRad('cosh(1)').value).toBeCloseTo(Math.cosh(1), 12)
+    expect(evalRad('tanh(1)').value).toBeCloseTo(Math.tanh(1), 12)
+    expect(evalRad('exp(1)').value).toBeCloseTo(Math.E, 12)
+  })
+
+  it('reports out-of-domain inverse trig as undefined', () => {
+    expect(evalDeg('asin(2)').error).toBe('Result is undefined')
+    expect(evalRad('acos(-1.5)').error).toBe('Result is undefined')
+  })
+
+  it('resolves constants and identifiers case-insensitively', () => {
+    expect(evalDeg('pi').value).toBe(Math.PI)
+    expect(evalDeg('e').value).toBe(Math.E)
+    expect(evalDeg('PI').value).toBe(Math.PI)
+    expect(evalDeg('Sin(30)').value).toBeCloseTo(0.5, 12)
+    expect(evalDeg('π').value).toBe(Math.PI)
+  })
+
+  it('multiplies implicitly before functions and constants', () => {
+    expect(evalDeg('2sin(30)').value).toBeCloseTo(1, 12)
+    expect(evalDeg('3e').value).toBeCloseTo(3 * Math.E, 12)
+    expect(evalDeg('2 3').value).toBe(6)
+  })
+
+  it('chains postfix operators', () => {
+    expect(evalDeg('3!!').value).toBe(720)
+    expect(evalDeg('50%%').value).toBeCloseTo(0.005, 15)
+    expect(evalDeg('3!^2').value).toBe(36)
+  })
+
+  it('reports factorial overflow as undefined', () => {
+    expect(evalDeg('170!').value).toBeGreaterThan(1e306)
+    expect(evalDeg('171!').error).toBe('Result is undefined')
+  })
+
+  it('returns the exact syntax error messages', () => {
+    expect(evalDeg('2 +').error).toBe('Incomplete expression')
+    expect(evalDeg('(2 + 3').error).toBe('Missing closing bracket')
+    expect(evalDeg('2 + 3)').error).toBe('Unexpected ")"')
+    expect(evalDeg('()').error).toBe('Unexpected ")"')
+    expect(evalDeg('* 2').error).toBe('Unexpected "*"')
+    expect(evalDeg('(2 + 3 *)').error).toBe('Unexpected ")"')
+    expect(evalDeg('foo(2)').error).toBe('Unknown function or constant "foo"')
+    expect(evalDeg('sin 30').error).toBe('Expected "(" after sin')
+    expect(evalDeg('2 $ 3').error).toBe('Unexpected "$"')
+    expect(evalDeg('2.5!').error).toBe('Factorial needs a whole number ≥ 0')
+    expect(evalDeg('1 / 0').error).toBe('Result is undefined')
+  })
+
+  it('accepts expressions up to the 500-character limit', () => {
+    const atLimit = '1+'.repeat(249) + '11'
+    expect(atLimit).toHaveLength(500)
+    expect(evalDeg(atLimit).value).toBe(260)
+    expect(evalDeg(atLimit + '1').error).toBe('Expression is too long')
+  })
+
+  it('formats very large and very small results', () => {
+    expect(evalDeg('10^21').display).toBe('1e+21')
+    expect(evalDeg('10^-7').display).toBe('1e-7')
+    expect(evalDeg('2^0.5').display).toBe('1.41421356237')
+  })
+
+  it('returns the numeric value alongside the display', () => {
+    expect(evalDeg('2 + 2')).toEqual({ value: 4, display: '4', error: null })
+  })
+})

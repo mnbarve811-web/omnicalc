@@ -43,3 +43,50 @@ describe('calculateStatistics', () => {
     expect(calculateStatistics({ values: [1, 2, 3] }).mode).toEqual([])
   })
 })
+
+describe('calculateStatistics edge cases', () => {
+  it('single value: every statistic collapses to that value', () => {
+    expect(calculateStatistics({ values: [-4.5] })).toEqual({
+      count: 1, sum: -4.5, mean: -4.5, median: -4.5, mode: [], range: 0, variance: 0, standardDeviation: 0, min: -4.5, max: -4.5,
+    })
+  })
+  it('even count: median averages the two middle values of the sorted data', () => {
+    expect(calculateStatistics({ values: [10, 1, 7, 3] }).median).toBe(5)
+  })
+  it('odd count: median uses the sorted middle value, not the input order', () => {
+    expect(calculateStatistics({ values: [9, 1, 5] }).median).toBe(5)
+  })
+  it('handles negative numbers', () => {
+    const r = calculateStatistics({ values: [-5, -1, -3, 1] })
+    expect(r.sum).toBe(-8)
+    expect(r.mean).toBe(-2)
+    expect(r.median).toBe(-2)
+    expect(r.min).toBe(-5)
+    expect(r.max).toBe(1)
+    expect(r.range).toBe(6)
+    expect(r.variance).toBe(5)
+    expect(r.standardDeviation).toBeCloseTo(Math.sqrt(5), 12)
+  })
+  it('uses population variance (divides by n)', () => {
+    expect(calculateStatistics({ values: [1, 2, 3, 4] }).variance).toBe(1.25)
+  })
+  it('handles decimals', () => {
+    const r = calculateStatistics({ values: [0.1, 0.2, 0.3] })
+    expect(r.mean).toBeCloseTo(0.2, 12)
+    expect(r.variance).toBeCloseTo(0.02 / 3, 12)
+  })
+  it('returns every value that ties for the highest frequency', () => {
+    expect(calculateStatistics({ values: [3, 1, 3, 1, 2] }).mode).toEqual([3, 1])
+  })
+  it('mode is empty when every value is identical', () => {
+    const r = calculateStatistics({ values: [4, 4, 4] })
+    expect(r.mode).toEqual([])
+    expect(r.variance).toBe(0)
+  })
+  it('sorts numerically rather than lexically', () => {
+    const r = calculateStatistics({ values: [10, 9, 100] })
+    expect(r.min).toBe(9)
+    expect(r.max).toBe(100)
+    expect(r.median).toBe(10)
+  })
+})
