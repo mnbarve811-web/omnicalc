@@ -36,8 +36,35 @@ export interface StatisticsResult {
   max: number
 }
 
-export function calculateStatistics(_inputs: StatisticsInputs): StatisticsResult {
-  throw new Error('Not implemented')
+export function calculateStatistics({ values }: StatisticsInputs): StatisticsResult {
+  const count = values.length
+  const sum = values.reduce((a, b) => a + b, 0)
+  const mean = sum / count
+
+  const sorted = [...values].sort((a, b) => a - b)
+  const min = sorted[0]
+  const max = sorted[sorted.length - 1]
+
+  const median =
+    count % 2 === 1
+      ? sorted[Math.floor(count / 2)]
+      : (sorted[count / 2 - 1] + sorted[count / 2]) / 2
+
+  const range = max - min
+
+  const variance = values.reduce((acc, x) => acc + (x - mean) ** 2, 0) / count
+  const standardDeviation = Math.sqrt(variance)
+
+  // No value stands out when every frequency ties (all unique or all identical), so mode is [].
+  const freq = new Map<number, number>()
+  for (const v of values) freq.set(v, (freq.get(v) ?? 0) + 1)
+  const freqValues = Array.from(freq.values())
+  const freqEntries = Array.from(freq.entries())
+  const maxFreq = Math.max(...freqValues)
+  const allSameFreq = freqValues.every(f => f === maxFreq)
+  const mode = allSameFreq ? [] : freqEntries.filter(([, f]) => f === maxFreq).map(([v]) => v)
+
+  return { count, sum, mean, median, mode, range, variance, standardDeviation, min, max }
 }
 
 // --- Fractions ---
