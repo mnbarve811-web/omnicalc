@@ -16,8 +16,19 @@ const UNITS_PER_CATEGORY: Record<UnitCategory, string[]> = {
   pressure:    ['Pa', 'kPa', 'bar', 'psi', 'atm'],
 }
 
+function parseCategory(s: string): UnitCategory {
+  if (!(s in UNITS_PER_CATEGORY)) throw new Error(`Unknown unit category: ${s}`)
+  return s as UnitCategory
+}
+
+function pickUnit(requested: string, fallback: string, units: string[], fallbackIndex: number): string {
+  if (units.includes(requested)) return requested
+  if (units.includes(fallback)) return fallback
+  return units[fallbackIndex]
+}
+
 const SCHEMA = {
-  category: { param: 'cat',   default: 'length' as UnitCategory, parse: s => s as UnitCategory, serialize: s => s },
+  category: { param: 'cat',   default: 'length' as UnitCategory, parse: parseCategory, serialize: s => s },
   fromUnit: { param: 'from',  default: 'km',    parse: s => s,   serialize: s => s },
   toUnit:   { param: 'to',    default: 'm',     parse: s => s,   serialize: s => s },
   value:    { param: 'value', default: 1,       parse: Number,   serialize: String },
@@ -28,14 +39,15 @@ export function UnitConversionCalculator() {
     SCHEMA as Schema<ConversionInputs & Record<string, unknown>>
   )
 
-  const result = calculateConversion(values)
   const units = UNITS_PER_CATEGORY[values.category]
+  // Units come from the URL independently of the category, so ones that don't belong to it fall back
+  const fromUnit = pickUnit(values.fromUnit, SCHEMA.fromUnit.default, units, 0)
+  const toUnit = pickUnit(values.toUnit, SCHEMA.toUnit.default, units, 1)
+  const result = calculateConversion({ ...values, fromUnit, toUnit })
   const canExport =
     Number.isFinite(values.value) &&
     // 0° is a real temperature, so only the other categories treat zero as an empty input
     (values.value !== 0 || values.category === 'temperature') &&
-    units.includes(values.fromUnit) &&
-    units.includes(values.toUnit) &&
     Number.isFinite(result.result)
 
   function handleCategoryChange(newCategory: UnitCategory) {
@@ -93,7 +105,7 @@ export function UnitConversionCalculator() {
             <label className="text-sm font-medium mb-1 block">From</label>
             <select
               className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background"
-              value={values.fromUnit}
+              value={fromUnit}
               onChange={(e) => setValues({ fromUnit: e.target.value } as Partial<ConversionInputs & Record<string, unknown>>)}
             >
               {units.map((u) => (
@@ -105,7 +117,7 @@ export function UnitConversionCalculator() {
             <label className="text-sm font-medium mb-1 block">To</label>
             <select
               className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background"
-              value={values.toUnit}
+              value={toUnit}
               onChange={(e) => setValues({ toUnit: e.target.value } as Partial<ConversionInputs & Record<string, unknown>>)}
             >
               {units.map((u) => (
@@ -123,16 +135,16 @@ export function UnitConversionCalculator() {
             csvRows={[{
               Category: CATEGORIES.find((cat) => cat.value === values.category)?.label ?? values.category,
               'From Value': values.value,
-              'From Unit': values.fromUnit,
+              'From Unit': fromUnit,
               'To Value': Number(result.result.toPrecision(7)),
-              'To Unit': values.toUnit,
+              'To Unit': toUnit,
               Formula: result.formula,
             }]}
             disabled={!canExport}
           />
           <p className="text-sm text-muted-foreground mb-1">Result</p>
           <p className="text-4xl font-bold">
-            {Number(result.result.toPrecision(7)).toString()} <span className="text-2xl font-normal text-muted-foreground">{values.toUnit}</span>
+            {Number(result.result.toPrecision(7)).toString()} <span className="text-2xl font-normal text-muted-foreground">{toUnit}</span>
           </p>
           <p className="text-sm text-muted-foreground mt-2">{result.formula}</p>
         </div>

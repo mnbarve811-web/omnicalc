@@ -181,16 +181,14 @@ test.describe('Unit Converter', () => {
     await expect(resultValue(page)).toHaveText('1000 m')
   })
 
-  test.fixme('an unknown category param falls back to the default', async ({ page }) => {
-    // Bug: SCHEMA.category.parse casts any string, so UNITS_PER_CATEGORY[cat] is undefined and the calculator throws
+  test('an unknown category param falls back to the default', async ({ page }) => {
     await page.goto('/utility/unit-conversion?cat=bogus')
     await expect(page.getByRole('heading', { level: 1, name: 'Unit Converter' })).toBeVisible()
     await expect(categorySelect(page)).toHaveValue('length')
     await expect(resultValue(page)).toHaveText('1000 m')
   })
 
-  test.fixme('an unknown unit param falls back to the default', async ({ page }) => {
-    // Bug: from/to params are not validated against the category, so the result renders as "NaN"
+  test('an unknown unit param falls back to the default', async ({ page }) => {
     await page.goto('/utility/unit-conversion?from=parsec')
     await expect(resultValue(page)).not.toContainText('NaN')
     await expect(resultValue(page)).toHaveText('1000 m')
@@ -284,8 +282,7 @@ test.describe('Date Calculator', () => {
     await expectBreakdown(page, '2000-01-01', '2026-10-31')
   })
 
-  test.fixme('an invalid date param falls back to the default', async ({ page }) => {
-    // Bug: start/end params are not validated, so a malformed date renders "NaN" in every result card
+  test('an invalid date param falls back to the default', async ({ page }) => {
     await page.goto('/utility/date-diff?start=not-a-date&end=2026-10-31')
     await expect(page.getByRole('heading', { level: 1, name: 'Date Calculator' })).toBeVisible()
     await expect(page.locator('#date-diff-results')).not.toContainText('NaN')

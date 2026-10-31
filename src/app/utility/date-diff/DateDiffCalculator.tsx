@@ -16,9 +16,15 @@ function oneYearAgo(): string {
   return d.toISOString().split('T')[0]
 }
 
+// The hook falls back to the default when parse throws, so a malformed URL date never reaches the engine
+function parseIsoDate(s: string): string {
+  if (!isValidIsoDate(s)) throw new Error(`Invalid date: ${s}`)
+  return s
+}
+
 const SCHEMA = {
-  startDate: { param: 'start', default: oneYearAgo(), parse: (s: string) => s, serialize: (s: string) => s },
-  endDate:   { param: 'end',   default: today(),      parse: (s: string) => s, serialize: (s: string) => s },
+  startDate: { param: 'start', default: oneYearAgo(), parse: parseIsoDate, serialize: (s: string) => s },
+  endDate:   { param: 'end',   default: today(),      parse: parseIsoDate, serialize: (s: string) => s },
 } as const satisfies Schema<DateDiffInputs>
 
 function formatDate(iso: string): string {
