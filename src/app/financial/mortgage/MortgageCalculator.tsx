@@ -23,6 +23,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ExportButtons } from '@/components/common/ExportButtons'
 
 const SCHEMA = {
   homePrice:     { param: 'price', default: 400000, parse: Number, serialize: String },
@@ -69,6 +70,7 @@ export function MortgageCalculator() {
   }
 
   const loanAmount = Math.max(0, values.homePrice - values.downPayment)
+  const canExport = values.homePrice > 0 && values.loanTermYears > 0 && loanAmount > 0
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-8">
@@ -173,7 +175,20 @@ export function MortgageCalculator() {
       </Card>
 
       {/* Right column: results */}
-      <div className="space-y-6">
+      <div id="mortgage-results" className="space-y-6">
+        <ExportButtons
+          resultsId="mortgage-results"
+          filename="mortgage-amortization"
+          csvRows={schedule.map((row) => ({
+            Month: row.month,
+            Payment: row.payment.toFixed(2),
+            Principal: row.principal.toFixed(2),
+            Interest: row.interest.toFixed(2),
+            Balance: row.balance.toFixed(2),
+          }))}
+          disabled={!canExport}
+        />
+
         {/* Summary tiles */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card>
