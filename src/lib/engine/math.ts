@@ -103,8 +103,57 @@ export interface FractionResult {
   mixed: string   // e.g. "1 1/2"
 }
 
-export function calculateFraction(_inputs: FractionInputs): FractionResult {
-  throw new Error('Not implemented')
+function gcd(a: number, b: number): number {
+  while (b !== 0) {
+    ;[a, b] = [b, a % b]
+  }
+  return Math.abs(a)
+}
+
+function simplify(n: number, d: number): [number, number] {
+  if (d === 0) return [0, 1]
+  const g = gcd(Math.abs(n), Math.abs(d))
+  const sign = d < 0 ? -1 : 1
+  return [sign * n / g, Math.abs(d) / g]
+}
+
+function mixedString(numerator: number, denominator: number): string {
+  const whole = Math.trunc(numerator / denominator)
+  const rem = Math.abs(numerator % denominator)
+  if (denominator === 1 || rem === 0) return String(whole)
+  if (whole === 0) return `${Math.abs(numerator)}/${denominator}`
+  return `${whole} ${rem}/${denominator}`
+}
+
+export function calculateFraction(inputs: FractionInputs): FractionResult {
+  const { numerator1: n1, denominator1: d1, numerator2: n2, denominator2: d2, operation } = inputs
+
+  if (operation === 'divide' && n2 === 0) {
+    return { numerator: 0, denominator: 1, decimal: 0, mixed: '0' }
+  }
+
+  let rawN: number
+  let rawD: number
+
+  if (operation === 'add') {
+    rawN = n1 * d2 + n2 * d1
+    rawD = d1 * d2
+  } else if (operation === 'subtract') {
+    rawN = n1 * d2 - n2 * d1
+    rawD = d1 * d2
+  } else if (operation === 'multiply') {
+    rawN = n1 * n2
+    rawD = d1 * d2
+  } else {
+    rawN = n1 * d2
+    rawD = n2 * d1
+  }
+
+  const [numerator, denominator] = simplify(rawN, rawD)
+  const decimal = numerator / denominator
+  const mixed = mixedString(numerator, denominator)
+
+  return { numerator, denominator, decimal, mixed }
 }
 
 // --- Quadratic Equation ---
