@@ -19,11 +19,13 @@ export interface BMIResult {
 export function calculateBMI({ weightKg, heightCm }: BMIInputs): BMIResult {
   const heightM = Math.max(1, heightCm) / 100
   const value = weightKg / (heightM * heightM)
+  // BMI is reported to one decimal, so classify that figure; otherwise 24.96 would show "25.0" as Normal weight
+  const displayed = Math.round(value * 10) / 10
   const category =
-    value < 18.5 ? 'Underweight' :
-    value < 25   ? 'Normal weight' :
-    value < 30   ? 'Overweight' :
-                   'Obese'
+    displayed < 18.5 ? 'Underweight' :
+    displayed < 25   ? 'Normal weight' :
+    displayed < 30   ? 'Overweight' :
+                       'Obese'
   return { value, category }
 }
 

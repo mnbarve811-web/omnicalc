@@ -21,4 +21,8 @@ describe('calculateBMI', () => {
   it('zero height returns a finite value', () => {
     expect(Number.isFinite(calculateBMI({ weightKg: 70, heightCm: 0 }).value)).toBe(true)
   })
+  it('picks the category from the BMI as displayed to one decimal', () => {
+    expect(calculateBMI({ weightKg: 24.96, heightCm: 100 }).category).toBe('Overweight')
+    expect(calculateBMI({ weightKg: 18.46, heightCm: 100 }).category).toBe('Normal weight')
+  })
 })
