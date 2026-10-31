@@ -8,9 +8,16 @@ import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { ExportButtons } from '@/components/common/ExportButtons'
 
+// The hook falls back to the default when parse throws, so an unknown frequency never reaches the engine
+function parsePayFrequency(s: string): PayFrequency {
+  const match = FREQ_OPTIONS.find(f => f.value === s)
+  if (!match) throw new Error(`Unknown pay frequency: ${s}`)
+  return match.value
+}
+
 const SCHEMA = {
   grossPay:        { param: 'gross',   default: 5000,     parse: Number, serialize: String },
-  payFrequency:    { param: 'freq',    default: 'monthly' as PayFrequency, parse: s => s as PayFrequency, serialize: s => s },
+  payFrequency:    { param: 'freq',    default: 'monthly' as PayFrequency, parse: parsePayFrequency, serialize: s => s },
   federalTaxRate:  { param: 'fed',     default: 22,       parse: Number, serialize: String },
   stateTaxRate:    { param: 'state',   default: 5,        parse: Number, serialize: String },
   otherDeductions: { param: 'other',   default: 200,      parse: Number, serialize: String },

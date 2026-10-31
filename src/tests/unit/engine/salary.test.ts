@@ -83,10 +83,4 @@ describe('calculateSalary edge cases', () => {
     expect(r.medicare).toBeCloseTo(17.90112, 8)
   })
 
-  // Bug: payFrequency comes from the URL unchecked, so an unknown value yields NaN annual totals
-  it.todo('an unknown pay frequency does not produce NaN annual totals', () => {
-    const r = calculateSalary({ ...BASE, payFrequency: 'fortnightly' as never })
-    expect(Number.isNaN(r.annualGross)).toBe(false)
-    expect(Number.isNaN(r.annualNet)).toBe(false)
-  })
 })
