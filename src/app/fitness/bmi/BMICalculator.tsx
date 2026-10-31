@@ -3,9 +3,12 @@
 import { useCalculatorUrl, type Schema } from '@/lib/hooks/use-calculator-url'
 import { calculateBMI, type BMIInputs } from '@/lib/engine/fitness'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { ExportButtons } from '@/components/common/ExportButtons'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Field } from '@/components/common/Field'
+import { CalculatorGrid, InputPanel, ResultPanel } from '@/components/common/CalculatorLayout'
+import { ResultHero } from '@/components/common/Result'
+import { ResultActions } from '@/components/common/ResultActions'
+import { MobileResultBar } from '@/components/common/MobileResultBar'
 
 const SCHEMA = {
   weightKg: { param: 'weight', default: 70, parse: Number, serialize: String },
@@ -39,35 +42,55 @@ export function BMICalculator() {
   const canExport = values.weightKg > 0 && values.heightCm > 0
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-8">
-      {/* Left: Inputs */}
-      <Card>
-        <CardHeader><CardTitle>Inputs</CardTitle></CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <label className="text-sm font-medium mb-1 block">Weight (kg)</label>
-            <Input
-              type="number"
-              value={values.weightKg}
-              min={1}
-              onChange={e => setValues({ weightKg: Number(e.target.value) })}
-            />
-          </div>
-          <div>
-            <label className="text-sm font-medium mb-1 block">Height (cm)</label>
-            <Input
-              type="number"
-              value={values.heightCm}
-              min={1}
-              onChange={e => setValues({ heightCm: Number(e.target.value) })}
-            />
-          </div>
-        </CardContent>
-      </Card>
+    <CalculatorGrid>
+      <InputPanel title="Inputs">
+        <Field label="Weight (kg)" type="number" value={values.weightKg} min={1} onChange={e => setValues({ weightKg: Number(e.target.value) })} />
+        <Field label="Height (cm)" type="number" value={values.heightCm} min={1} onChange={e => setValues({ heightCm: Number(e.target.value) })} />
+      </InputPanel>
 
-      {/* Right: Results */}
-      <div id="bmi-results" className="space-y-6">
-        <ExportButtons
+      <ResultPanel id="bmi-results">
+        {/* The hero's only <span> is the category badge; e2e reads the category from it */}
+        <ResultHero
+          label="Your BMI"
+          value={result.value.toFixed(1)}
+          caption={
+            <span className={`inline-block rounded-full px-3 py-1 text-sm font-semibold ${activeCategory?.badge ?? ''}`}>
+              {result.category}
+            </span>
+          }
+        >
+          <figure aria-label={`BMI ${result.value.toFixed(1)} on a scale from ${SCALE_MIN} to ${SCALE_MAX}`} className="relative pt-3">
+            <div aria-hidden className="flex h-3 gap-0.5 overflow-hidden rounded-full">
+              {CATEGORIES.map(c => (
+                <div
+                  key={c.label}
+                  className={`${c.color} h-full`}
+                  style={{ width: `${bmiToPercent(c.max) - bmiToPercent(c.min)}%` }}
+                />
+              ))}
+            </div>
+            <div
+              aria-hidden
+              className="absolute top-0 -translate-x-1/2 transition-[left] duration-300 ease-out motion-reduce:transition-none"
+              style={{ left: `${markerPct}%` }}
+            >
+              <div className="h-0 w-0 border-l-[6px] border-r-[6px] border-t-[8px] border-l-transparent border-r-transparent border-t-foreground" />
+            </div>
+            <div aria-hidden className="relative mt-2 h-4 text-xs tabular-nums text-muted-foreground">
+              {SCALE_TICKS.map(tick => (
+                <div
+                  key={tick}
+                  className="absolute -translate-x-1/2 first:translate-x-0 last:-translate-x-full"
+                  style={{ left: `${bmiToPercent(tick)}%` }}
+                >
+                  {tick}
+                </div>
+              ))}
+            </div>
+          </figure>
+        </ResultHero>
+
+        <ResultActions
           resultsId="bmi-results"
           filename="bmi-result"
           csvRows={CATEGORIES.map(c => ({
@@ -75,54 +98,8 @@ export function BMICalculator() {
             'BMI Range': c.range,
             'Your BMI': result.category === c.label ? result.value.toFixed(1) : '',
           }))}
-          disabled={!canExport}
+          canExport={canExport}
         />
-
-        <Card>
-          <CardContent className="pt-6 flex items-center gap-6">
-            <div>
-              <p className="text-sm text-muted-foreground mb-1">Your BMI</p>
-              <p className="text-5xl font-bold">{result.value.toFixed(1)}</p>
-            </div>
-            <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${activeCategory?.badge ?? ''}`}>
-              {result.category}
-            </span>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader><CardTitle>BMI Scale</CardTitle></CardHeader>
-          <CardContent>
-            <div className="relative mt-2 mb-6">
-              <div className="flex h-6 rounded-full overflow-hidden">
-                {CATEGORIES.map(c => (
-                  <div
-                    key={c.label}
-                    className={`${c.color} h-full`}
-                    style={{ width: `${bmiToPercent(c.max) - bmiToPercent(c.min)}%` }}
-                  />
-                ))}
-              </div>
-              <div
-                className="absolute top-0 -translate-x-1/2"
-                style={{ left: `${markerPct}%` }}
-              >
-                <div className="w-0 h-0 border-l-[6px] border-r-[6px] border-t-[8px] border-l-transparent border-r-transparent border-t-foreground" />
-              </div>
-              <div className="relative h-4 mt-2 text-xs text-muted-foreground">
-                {SCALE_TICKS.map(tick => (
-                  <span
-                    key={tick}
-                    className="absolute -translate-x-1/2 first:translate-x-0 last:-translate-x-full"
-                    style={{ left: `${bmiToPercent(tick)}%` }}
-                  >
-                    {tick}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
 
         <Card>
           <CardHeader><CardTitle>BMI Categories</CardTitle></CardHeader>
@@ -138,7 +115,8 @@ export function BMICalculator() {
                 {CATEGORIES.map(c => (
                   <TableRow
                     key={c.label}
-                    className={result.category === c.label ? 'font-semibold' : ''}
+                    aria-current={result.category === c.label ? 'true' : undefined}
+                    className={result.category === c.label ? 'bg-accent font-semibold' : ''}
                   >
                     <TableCell>
                       <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${c.badge}`}>
@@ -152,7 +130,9 @@ export function BMICalculator() {
             </Table>
           </CardContent>
         </Card>
-      </div>
-    </div>
+      </ResultPanel>
+
+      <MobileResultBar targetId="bmi-results" value={result.value.toFixed(1)} caption="BMI" />
+    </CalculatorGrid>
   )
 }

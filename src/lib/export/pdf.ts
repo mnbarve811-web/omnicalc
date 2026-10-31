@@ -60,7 +60,7 @@ export async function exportToPDF(elementId: string, filename: string): Promise<
     canvas = await html2canvas(element, {
       scale: 2,
       backgroundColor: '#ffffff',
-      ignoreElements: (el) => el.hasAttribute('data-export-buttons'),
+      ignoreElements: (el) => el.hasAttribute('data-export-buttons') || el.hasAttribute('data-export-ignore'),
       onclone: (_doc, clonedElement) => inlineSupportedColors(clonedElement),
     })
   } finally {

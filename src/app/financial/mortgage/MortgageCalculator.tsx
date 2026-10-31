@@ -13,7 +13,6 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
 import {
   Table,
   TableBody,
@@ -23,7 +22,11 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ExportButtons } from '@/components/common/ExportButtons'
+import { Field } from '@/components/common/Field'
+import { CalculatorGrid, InputPanel, ResultPanel } from '@/components/common/CalculatorLayout'
+import { ProportionBar, ResultHero, ResultStat, ResultStats, type ProportionSegment } from '@/components/common/Result'
+import { ResultActions } from '@/components/common/ResultActions'
+import { MobileResultBar } from '@/components/common/MobileResultBar'
 
 const SCHEMA = {
   homePrice:     { param: 'price', default: 400000, parse: Number, serialize: String },
@@ -72,111 +75,39 @@ export function MortgageCalculator() {
   const loanAmount = Math.max(0, values.homePrice - values.downPayment)
   const canExport = values.homePrice > 0 && values.loanTermYears > 0 && loanAmount > 0
 
+  const breakdown: ProportionSegment[] = result.monthlyTotal > 0
+    ? [
+        { label: 'Principal & interest', value: result.monthlyPrincipalAndInterest, display: fmtCurrency(result.monthlyPrincipalAndInterest), colorClass: 'bg-chart-1' },
+        { label: 'Property tax', value: values.propertyTax, display: fmtCurrency(values.propertyTax), colorClass: 'bg-chart-4' },
+        { label: 'Insurance', value: values.homeInsurance, display: fmtCurrency(values.homeInsurance), colorClass: 'bg-chart-4/60' },
+        { label: 'HOA', value: values.hoa, display: fmtCurrency(values.hoa), colorClass: 'bg-chart-4/30' },
+      ]
+    : []
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-8">
-      {/* Left column: inputs */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Loan Details</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <label className="text-sm font-medium mb-1 block">Home Price</label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
-              <Input
-                type="number"
-                className="pl-7"
-                value={values.homePrice}
-                onChange={(e) => setValues({ homePrice: Number(e.target.value) })}
-              />
-            </div>
-          </div>
+    <CalculatorGrid>
+      <InputPanel title="Loan Details">
+        <Field label="Home Price" prefix="$" type="number" value={values.homePrice} onChange={(e) => setValues({ homePrice: Number(e.target.value) })} />
+        <Field label="Down Payment" prefix="$" type="number" value={values.downPayment} onChange={(e) => setValues({ downPayment: Number(e.target.value) })} />
+        <Field label="Loan Term" suffix="years" type="number" value={values.loanTermYears} onChange={(e) => setValues({ loanTermYears: Number(e.target.value) })} />
+        <Field label="Interest Rate" suffix="%" type="number" step="0.1" value={values.interestRate} onChange={(e) => setValues({ interestRate: Number(e.target.value) })} />
+        <Field label="Property Tax (monthly)" prefix="$" type="number" value={values.propertyTax} onChange={(e) => setValues({ propertyTax: Number(e.target.value) })} />
+        <Field label="Home Insurance (monthly)" prefix="$" type="number" value={values.homeInsurance} onChange={(e) => setValues({ homeInsurance: Number(e.target.value) })} />
+        <Field label="HOA (monthly)" prefix="$" type="number" value={values.hoa} onChange={(e) => setValues({ hoa: Number(e.target.value) })} />
+      </InputPanel>
 
-          <div>
-            <label className="text-sm font-medium mb-1 block">Down Payment</label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
-              <Input
-                type="number"
-                className="pl-7"
-                value={values.downPayment}
-                onChange={(e) => setValues({ downPayment: Number(e.target.value) })}
-              />
-            </div>
-          </div>
+      <ResultPanel id="mortgage-results">
+        <ResultHero label="Total Monthly" value={fmtCurrency(result.monthlyTotal)} caption="Estimated monthly housing cost">
+          <ProportionBar label="What makes up the monthly payment" segments={breakdown} />
+        </ResultHero>
 
-          <div>
-            <label className="text-sm font-medium mb-1 block">Loan Term</label>
-            <div className="relative">
-              <Input
-                type="number"
-                className="pr-16"
-                value={values.loanTermYears}
-                onChange={(e) => setValues({ loanTermYears: Number(e.target.value) })}
-              />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">years</span>
-            </div>
-          </div>
+        <ResultStats>
+          <ResultStat label="Monthly P&I" value={fmtCurrency(result.monthlyPrincipalAndInterest)} />
+          <ResultStat label="Total Interest" value={fmtCurrency(result.totalInterestPaid)} />
+          <ResultStat label="Loan Amount" value={fmtCurrency(loanAmount)} />
+        </ResultStats>
 
-          <div>
-            <label className="text-sm font-medium mb-1 block">Interest Rate</label>
-            <div className="relative">
-              <Input
-                type="number"
-                step="0.1"
-                className="pr-8"
-                value={values.interestRate}
-                onChange={(e) => setValues({ interestRate: Number(e.target.value) })}
-              />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
-            </div>
-          </div>
-
-          <div>
-            <label className="text-sm font-medium mb-1 block">Property Tax (monthly)</label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
-              <Input
-                type="number"
-                className="pl-7"
-                value={values.propertyTax}
-                onChange={(e) => setValues({ propertyTax: Number(e.target.value) })}
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="text-sm font-medium mb-1 block">Home Insurance (monthly)</label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
-              <Input
-                type="number"
-                className="pl-7"
-                value={values.homeInsurance}
-                onChange={(e) => setValues({ homeInsurance: Number(e.target.value) })}
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="text-sm font-medium mb-1 block">HOA (monthly)</label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
-              <Input
-                type="number"
-                className="pl-7"
-                value={values.hoa}
-                onChange={(e) => setValues({ hoa: Number(e.target.value) })}
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Right column: results */}
-      <div id="mortgage-results" className="space-y-6">
-        <ExportButtons
+        <ResultActions
           resultsId="mortgage-results"
           filename="mortgage-amortization"
           csvRows={schedule.map((row) => ({
@@ -186,47 +117,8 @@ export function MortgageCalculator() {
             Interest: row.interest.toFixed(2),
             Balance: row.balance.toFixed(2),
           }))}
-          disabled={!canExport}
+          canExport={canExport}
         />
-
-        {/* Summary tiles */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-xs text-muted-foreground font-normal">Monthly P&I</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-xl font-bold">{fmtCurrency(result.monthlyPrincipalAndInterest)}</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-xs text-muted-foreground font-normal">Total Monthly</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-xl font-bold">{fmtCurrency(result.monthlyTotal)}</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-xs text-muted-foreground font-normal">Total Interest</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-xl font-bold">{fmtCurrency(result.totalInterestPaid)}</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-xs text-muted-foreground font-normal">Loan Amount</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-xl font-bold">{fmtCurrency(loanAmount)}</p>
-            </CardContent>
-          </Card>
-        </div>
 
         {/* Area chart */}
         <Card>
@@ -236,30 +128,31 @@ export function MortgageCalculator() {
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
               <AreaChart data={yearlyData} margin={{ top: 4, right: 16, left: 16, bottom: 4 }}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="year" tickFormatter={(v: number) => `Yr ${v}`} />
-                <YAxis tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`} />
+                <CartesianGrid stroke="var(--border)" vertical={false} />
+                <XAxis dataKey="year" tickFormatter={(v: number) => `Yr ${v}`} tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }} tickLine={false} axisLine={false} />
+                <YAxis tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`} tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }} tickLine={false} axisLine={false} />
                 <Tooltip
                   formatter={(value: number) => fmtCurrency(value)}
                   labelFormatter={(label: number) => `Year ${label}`}
+                  contentStyle={{ borderRadius: 8, border: '1px solid var(--border)', fontSize: 13 }}
                 />
-                <Legend />
+                <Legend wrapperStyle={{ fontSize: 13 }} />
                 <Area
                   type="monotone"
                   dataKey="principalPaid"
                   stackId="a"
                   name="Principal Paid"
-                  stroke="#2563eb"
-                  fill="#2563eb"
-                  fillOpacity={0.6}
+                  stroke="var(--chart-1)"
+                  fill="var(--chart-1)"
+                  fillOpacity={0.55}
                 />
                 <Area
                   type="monotone"
                   dataKey="interestPaid"
                   stackId="a"
                   name="Interest Paid"
-                  stroke="#dc2626"
-                  fill="#dc2626"
+                  stroke="var(--chart-2)"
+                  fill="var(--chart-2)"
                   fillOpacity={0.4}
                 />
               </AreaChart>
@@ -330,7 +223,9 @@ export function MortgageCalculator() {
             </Card>
           </TabsContent>
         </Tabs>
-      </div>
-    </div>
+      </ResultPanel>
+
+      <MobileResultBar targetId="mortgage-results" value={fmtCurrency(result.monthlyTotal)} caption="per month" />
+    </CalculatorGrid>
   )
 }
