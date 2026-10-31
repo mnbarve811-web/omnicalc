@@ -135,6 +135,24 @@ export interface PregnancyResult {
   trimester: 1 | 2 | 3
 }
 
-export function calculatePregnancy(_inputs: PregnancyInputs): PregnancyResult {
-  throw new Error('Not implemented')
+export function calculatePregnancy(inputs: PregnancyInputs): PregnancyResult {
+  // YYYY-MM-DD parses as UTC midnight, so do all day math in UTC to avoid timezone/DST drift
+  const lmp = new Date(inputs.lastMenstrualPeriod)
+  const now = new Date()
+  const today = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()))
+
+  const dueDate = new Date(lmp)
+  dueDate.setUTCDate(dueDate.getUTCDate() + 280)
+
+  const msPerDay = 1000 * 60 * 60 * 24
+  const daysElapsed = (today.getTime() - lmp.getTime()) / msPerDay
+  const currentWeek = Math.max(0, Math.min(42, Math.floor(daysElapsed / 7)))
+
+  const trimester: 1 | 2 | 3 = currentWeek <= 12 ? 1 : currentWeek <= 27 ? 2 : 3
+
+  return {
+    dueDate: dueDate.toISOString().split('T')[0],
+    currentWeek,
+    trimester,
+  }
 }
