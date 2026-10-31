@@ -31,4 +31,8 @@ describe('calculateConversion', () => {
     expect(typeof r.formula).toBe('string')
     expect(r.formula.length).toBeGreaterThan(0)
   })
+  it('writes kelvin without a degree sign', () => {
+    const r = calculateConversion({ category: 'temperature', fromUnit: 'C', toUnit: 'K', value: 25 })
+    expect(r.formula).toBe('25°C = 298.15 K')
+  })
 })

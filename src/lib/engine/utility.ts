@@ -92,12 +92,17 @@ function convertTemperature(value: number, from: string, to: string): number {
   return celsius + 273.15
 }
 
+// Kelvin is an absolute scale, written "298.15 K" with no degree sign
+function temperatureSuffix(unit: string): string {
+  return unit === 'K' ? ' K' : `°${unit}`
+}
+
 export function calculateConversion({ category, fromUnit, toUnit, value }: ConversionInputs): ConversionResult {
   if (category === 'temperature') {
     const result = convertTemperature(value, fromUnit, toUnit)
     return {
       result,
-      formula: `${value}°${fromUnit} = ${Number(result.toPrecision(6))}°${toUnit}`,
+      formula: `${value}${temperatureSuffix(fromUnit)} = ${Number(result.toPrecision(6))}${temperatureSuffix(toUnit)}`,
     }
   }
   const result = value * TO_BASE[category][fromUnit] / TO_BASE[category][toUnit]
