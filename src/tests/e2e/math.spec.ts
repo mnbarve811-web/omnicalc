@@ -43,7 +43,8 @@ async function expectPageBasics(page: Page, path: string, heading: string) {
   expect((await guideParagraph.textContent())?.length ?? 0).toBeGreaterThan(100)
 
   await expect(page.getByRole('heading', { name: 'Frequently Asked Questions', exact: true })).toBeVisible()
-  expect(await page.locator('main > section').last().getByRole('button').count()).toBeGreaterThan(0)
+  const faqSection = page.locator('main > section').filter({ has: page.getByRole('heading', { name: 'Frequently Asked Questions', exact: true }) })
+  expect(await faqSection.getByRole('button').count()).toBeGreaterThan(0)
 }
 
 function exportButton(page: Page, name: 'Download CSV' | 'Download PDF') {
@@ -108,7 +109,7 @@ test.describe('Statistics calculator', () => {
     page
       .locator('[data-slot="card"]')
       .filter({ has: page.locator('[data-slot="card-title"]').getByText(label, { exact: true }) })
-      .locator('p')
+      .locator('[data-slot="card-content"]')
 
   function fmt(n: number): string {
     return Number.isInteger(n) ? String(n) : n.toFixed(4).replace(/\.?0+$/, '')
@@ -268,7 +269,7 @@ test.describe('Scientific calculator', () => {
 })
 
 test.describe('Percentage calculator', () => {
-  const resultDisplay = (page: Page) => page.locator('#percentage-results [data-slot="card-content"] p').first()
+  const resultDisplay = (page: Page) => page.locator('#percentage-results [data-slot="card-content"]').first()
   const modeButton = (page: Page, name: string) =>
     page.getByRole('group', { name: 'Calculation mode' }).getByRole('button', { name, exact: true })
 
@@ -344,7 +345,10 @@ test.describe('Fractions calculator', () => {
   const resultNumerator = (page: Page) => results(page).locator('[data-slot="card-content"] span').nth(0)
   const resultDenominator = (page: Page) => results(page).locator('[data-slot="card-content"] span').nth(1)
   const labelledValue = (page: Page, label: string) =>
-    results(page).locator('div.text-center').filter({ has: page.getByText(label, { exact: true }) }).locator('p').last()
+    results(page)
+      .locator('[data-slot="card"]')
+      .filter({ has: page.locator('[data-slot="card-title"]').getByText(label, { exact: true }) })
+      .locator('[data-slot="card-content"]')
   const operationButton = (page: Page, label: string) => page.getByRole('button', { name: new RegExp(`${label}$`) })
 
   async function fillFractions(page: Page, n1: number, d1: number, n2: number, d2: number) {
@@ -429,8 +433,7 @@ test.describe('Quadratic equation solver', () => {
     page
       .locator('#quadratic-results [data-slot="card"]')
       .filter({ has: page.locator('[data-slot="card-title"]').getByText(title, { exact: true }) })
-      .locator('p')
-      .first()
+      .locator('[data-slot="card-content"]')
   const roots = (page: Page) => cardValue(page, 'Roots')
   const discriminant = (page: Page) => cardValue(page, 'Discriminant (b² − 4ac)')
 
