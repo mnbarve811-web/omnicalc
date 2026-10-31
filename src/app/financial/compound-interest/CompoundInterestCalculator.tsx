@@ -74,7 +74,7 @@ export function CompoundInterestCalculator() {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="year" label={{ value: 'Year', position: 'insideBottom', offset: -2 }} />
                 <YAxis tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
-                <Tooltip formatter={(v: number) => fmt(v)} />
+                <Tooltip formatter={(v) => typeof v === 'number' ? fmt(v) : String(v)} />
                 <Legend />
                 <Area type="monotone" dataKey="Contributions" stackId="a" stroke="#6366f1" fill="#c7d2fe" />
                 <Area type="monotone" dataKey="Interest" stackId="a" stroke="#10b981" fill="#a7f3d0" />

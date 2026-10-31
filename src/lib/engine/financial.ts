@@ -126,6 +126,8 @@ export interface CompoundInterestResult {
 export function calculateCompoundInterest(inputs: CompoundInterestInputs): CompoundInterestResult {
   const { initialInvestment, monthlyContribution, annualInterestRate, compoundFrequency, years } = inputs
 
+  if (years === 0) return { futureValue: 0, totalContributions: 0, totalInterestEarned: 0, yearlyBreakdown: [] }
+
   const monthlyRate = compoundFrequency > 0 && annualInterestRate > 0
     ? Math.pow(1 + (annualInterestRate / 100) / compoundFrequency, compoundFrequency / 12) - 1
     : annualInterestRate / 100 / 12
