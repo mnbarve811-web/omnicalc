@@ -289,12 +289,12 @@ test.describe('Date Calculator', () => {
     await expect(startInput(page)).not.toHaveValue('')
   })
 
-  test('an invalid date param does not crash and disables export', async ({ page }) => {
+  test('an invalid date param falls back to a valid date, so export stays enabled', async ({ page }) => {
     await page.goto('/utility/date-diff?start=not-a-date&end=2026-10-31')
     await expect(page.getByRole('heading', { level: 1, name: 'Date Calculator' })).toBeVisible()
     const exportButtons = page.locator('[data-export-buttons]')
-    await expect(exportButtons.getByRole('button', { name: 'Download CSV', exact: true })).toBeDisabled()
-    await expect(exportButtons.getByRole('button', { name: 'Download PDF', exact: true })).toBeDisabled()
+    await expect(exportButtons.getByRole('button', { name: 'Download CSV', exact: true })).toBeEnabled()
+    await expect(exportButtons.getByRole('button', { name: 'Download PDF', exact: true })).toBeEnabled()
   })
 
   test('exports CSV and PDF for a date range', async ({ page }) => {
