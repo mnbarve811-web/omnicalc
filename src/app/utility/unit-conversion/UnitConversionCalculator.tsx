@@ -32,7 +32,8 @@ export function UnitConversionCalculator() {
   const units = UNITS_PER_CATEGORY[values.category]
   const canExport =
     Number.isFinite(values.value) &&
-    values.value !== 0 &&
+    // 0° is a real temperature, so only the other categories treat zero as an empty input
+    (values.value !== 0 || values.category === 'temperature') &&
     units.includes(values.fromUnit) &&
     units.includes(values.toUnit) &&
     Number.isFinite(result.result)
