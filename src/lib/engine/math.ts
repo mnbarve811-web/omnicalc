@@ -192,8 +192,10 @@ export function calculateQuadratic({ a, b, c }: QuadraticInputs): QuadraticResul
     return { discriminant, roots: [x], rootsDisplay: `x = ${formatQuadraticRoot(x)}` }
   }
 
-  const x1 = (-b + Math.sqrt(discriminant)) / (2 * a)
-  const x2 = (-b - Math.sqrt(discriminant)) / (2 * a)
+  // (-b ± √D) / 2a loses the small root to cancellation when |b| ≫ |ac|; q = -(b + sign(b)√D) / 2 avoids
+  // subtracting near-equal numbers, and the second root comes from Vieta's x₁·x₂ = c/a
+  const q = -0.5 * (b + (b >= 0 ? 1 : -1) * Math.sqrt(discriminant))
+  const [x1, x2] = b >= 0 ? [c / q, q / a] : [q / a, c / q]
   return { discriminant, roots: [x1, x2], rootsDisplay: `x₁ = ${formatQuadraticRoot(x1)}, x₂ = ${formatQuadraticRoot(x2)}` }
 }
 

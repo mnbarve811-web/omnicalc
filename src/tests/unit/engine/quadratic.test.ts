@@ -93,8 +93,7 @@ describe('calculateQuadratic edge cases', () => {
     expect(r.discriminant).toBe(9)
     expect(r.rootsDisplay).toBe('Not a quadratic equation (a = 0)')
   })
-  // Bug: (-b - √D) / 2a cancels catastrophically when |b| ≫ |ac|; the small root comes out as 7.45e-9 instead of 1e-8
-  it.todo('keeps the small root accurate when b is much larger than a and c', () => {
+  it('keeps the small root accurate when b is much larger than a and c', () => {
     const r = calculateQuadratic({ a: 1, b: -1e8, c: 1 })
     expect(r.roots[0]).toBeCloseTo(1e8, 0)
     expect(r.roots[1]! / 1e-8).toBeCloseTo(1, 6)
