@@ -27,8 +27,31 @@ export interface MortgageResult {
   amortizationSchedule: AmortizationRow[]
 }
 
-export function calculateMortgage(_inputs: MortgageInputs): MortgageResult {
-  throw new Error('Not implemented')
+export function calculateMortgage(inputs: MortgageInputs): MortgageResult {
+  const { homePrice, downPayment, loanTermYears, interestRate, propertyTax, homeInsurance, hoa } = inputs
+  const principal = homePrice - downPayment
+  const monthlyRate = interestRate / 100 / 12
+  const n = loanTermYears * 12
+
+  const monthlyPrincipalAndInterest = monthlyRate === 0
+    ? principal / n
+    : principal * (monthlyRate * Math.pow(1 + monthlyRate, n)) / (Math.pow(1 + monthlyRate, n) - 1)
+
+  const monthlyTotal = monthlyPrincipalAndInterest + propertyTax + homeInsurance + hoa
+
+  const amortizationSchedule: AmortizationRow[] = []
+  let balance = principal
+  let totalInterestPaid = 0
+
+  for (let month = 1; month <= n; month++) {
+    const interest = balance * monthlyRate
+    const principalPaid = monthlyPrincipalAndInterest - interest
+    balance = Math.max(0, balance - principalPaid)
+    totalInterestPaid += interest
+    amortizationSchedule.push({ month, payment: monthlyPrincipalAndInterest, principal: principalPaid, interest, balance })
+  }
+
+  return { monthlyPrincipalAndInterest, monthlyTotal, totalPaymentCount: n, totalInterestPaid, amortizationSchedule }
 }
 
 // --- Auto Loan ---
