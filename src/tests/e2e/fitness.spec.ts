@@ -245,7 +245,7 @@ test.describe('BMI calculator', () => {
 
 test.describe('Body fat calculator', () => {
   const resultCard = (page: Page) => cardWithTitle(page.locator('#body-fat-results'), 'Result')
-  const bfValue = (page: Page) => resultCard(page).locator('p')
+  const bfValue = (page: Page) => resultCard(page).locator('p').nth(1)
   const bfCategory = (page: Page) => resultCard(page).locator('span')
 
   test('renders with default result, guide, FAQ, canonical and JSON-LD', async ({ page }) => {
