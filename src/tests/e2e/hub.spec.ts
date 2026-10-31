@@ -14,8 +14,9 @@ test('nav contains Utility link', async ({ page, viewport }) => {
   // Scoped to the header: the footer has its own always-visible navigation
   const headerNav = page.getByRole('banner').getByRole('navigation')
   if (viewport && viewport.width < 640) {
-    // Nav uses hidden sm:flex — should not be visible on mobile
-    await expect(headerNav).toBeHidden()
+    // On mobile the category links live behind the menu button
+    await page.getByRole('button', { name: 'Open menu' }).click()
+    await expect(page.locator('#mobile-menu').getByRole('link', { name: 'Utility Calculators' })).toBeVisible()
     return
   }
   await expect(headerNav.getByText('Utility')).toBeVisible()

@@ -27,7 +27,7 @@ test.describe('Financial Pillar', () => {
     await page.goto('/financial')
     await expect(page.getByRole('heading', { name: 'Financial Calculators' })).toBeVisible()
     for (const href of ['/financial/mortgage', '/financial/compound-interest', '/financial/retirement', '/financial/auto-loan', '/financial/salary', '/financial/debt-payoff']) {
-      await expect(page.locator(`a[href="${href}"]`)).toBeVisible()
+      await expect(page.locator(`main a[href="${href}"]`)).toBeVisible()
     }
   })
 
