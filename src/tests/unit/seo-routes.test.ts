@@ -25,8 +25,8 @@ describe('sitemap', () => {
     expect(new Set(urls).size).toBe(urls.length)
   })
 
-  it('covers the home page, 4 pillar hubs, and 19 calculators', () => {
-    expect(sitemap()).toHaveLength(24)
+  it('covers the home page, 4 pillar hubs, 19 calculators, and the about page', () => {
+    expect(sitemap()).toHaveLength(25)
   })
 })
 

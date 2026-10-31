@@ -27,6 +27,7 @@ const ROUTES = [
   '/utility/unit-conversion',
   '/utility/date-diff',
   '/utility/geometry',
+  '/about',
 ] as const
 
 export default function sitemap(): MetadataRoute.Sitemap {
