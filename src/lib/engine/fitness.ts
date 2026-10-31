@@ -16,8 +16,15 @@ export interface BMIResult {
   category: 'Underweight' | 'Normal weight' | 'Overweight' | 'Obese'
 }
 
-export function calculateBMI(_inputs: BMIInputs): BMIResult {
-  throw new Error('Not implemented')
+export function calculateBMI({ weightKg, heightCm }: BMIInputs): BMIResult {
+  const heightM = Math.max(1, heightCm) / 100
+  const value = weightKg / (heightM * heightM)
+  const category =
+    value < 18.5 ? 'Underweight' :
+    value < 25   ? 'Normal weight' :
+    value < 30   ? 'Overweight' :
+                   'Obese'
+  return { value, category }
 }
 
 // --- TDEE ---
