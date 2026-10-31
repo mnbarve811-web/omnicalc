@@ -3,7 +3,9 @@
 import { useCalculatorUrl, type Schema } from '@/lib/hooks/use-calculator-url'
 import { calculateStatistics } from '@/lib/engine/math'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { ExportButtons } from '@/components/common/ExportButtons'
+import { CalculatorGrid, InputPanel, ResultPanel } from '@/components/common/CalculatorLayout'
+import { ResultHero, ResultStat, ResultStats } from '@/components/common/Result'
+import { ResultActions } from '@/components/common/ResultActions'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts'
@@ -55,72 +57,73 @@ export function StatisticsCalculator() {
   const canExport = result !== null && values.length >= 1
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader><CardTitle>Data Input</CardTitle></CardHeader>
-        <CardContent>
-          <label className="text-sm font-medium mb-2 block">
+    <CalculatorGrid>
+      <InputPanel title="Data Input">
+        <div>
+          <label htmlFor="statistics-data" className="mb-1.5 block text-sm font-medium text-foreground">
             Numbers (separated by commas, spaces, or new lines)
           </label>
           <textarea
-            className="w-full min-h-[80px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-y"
+            id="statistics-data"
+            className="min-h-32 w-full resize-y rounded-sm border border-input bg-card px-3 py-2 text-base tabular-nums transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm"
             placeholder="e.g. 1, 2, 3, 4, 5 or one number per line"
             value={raw}
             onChange={e => setValues({ raw: e.target.value })}
           />
           {values.length === 0 && raw.trim() !== '' && (
-            <p className="text-sm text-destructive mt-1">No valid numbers found.</p>
+            <p className="mt-1.5 text-sm font-medium text-destructive">No valid numbers found.</p>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </InputPanel>
 
-      <div id="statistics-results" className="space-y-6">
-        <ExportButtons
+      <ResultPanel id="statistics-results">
+        {result ? (
+          <>
+            <ResultHero label="Mean" value={fmt(result.mean)} caption="Arithmetic average of the dataset" />
+
+            <ResultStats>
+              {stats.filter(({ label }) => label !== 'Mean').map(({ label, value }) => (
+                <ResultStat key={label} label={label} value={value} />
+              ))}
+            </ResultStats>
+          </>
+        ) : (
+          <p className="rounded-lg border border-dashed border-border bg-card p-5 text-sm text-muted-foreground">
+            Enter at least one number to see the statistics.
+          </p>
+        )}
+
+        <ResultActions
           resultsId="statistics-results"
           filename="statistics-summary"
           csvRows={[
             ...stats.map(({ label, value }) => ({ Metric: label, Value: value, Count: '' })),
             ...chartData.map(({ value, count }) => ({ Metric: 'Frequency', Value: value, Count: count })),
           ]}
-          disabled={!canExport}
+          canExport={canExport}
         />
 
-      {result && (
-        <>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-            {stats.map(({ label, value }) => (
-              <Card key={label}>
-                <CardHeader className="pb-1">
-                  <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                    {label}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-xl font-bold tabular-nums">{value}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          {chartData.length > 0 && (
-            <Card>
-              <CardHeader><CardTitle>Frequency Distribution</CardTitle></CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={260}>
-                  <BarChart data={chartData} margin={{ top: 4, right: 16, left: 0, bottom: 4 }}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="value" label={{ value: 'Value', position: 'insideBottom', offset: -2 }} />
-                    <YAxis allowDecimals={false} label={{ value: 'Count', angle: -90, position: 'insideLeft' }} />
-                    <Tooltip formatter={(v: number) => [v, 'Count']} />
-                    <Bar dataKey="count" fill="#6366f1" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          )}
-        </>
-      )}
-      </div>
-    </div>
+        {result && chartData.length > 0 && (
+          <Card>
+            <CardHeader><CardTitle>Frequency Distribution</CardTitle></CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart data={chartData} margin={{ top: 4, right: 16, left: 0, bottom: 12 }}>
+                  <CartesianGrid stroke="var(--border)" vertical={false} />
+                  <XAxis dataKey="value" tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }} tickLine={false} axisLine={false} label={{ value: 'Value', position: 'insideBottom', offset: -8, fill: 'var(--muted-foreground)', fontSize: 12 }} />
+                  <YAxis allowDecimals={false} tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }} tickLine={false} axisLine={false} label={{ value: 'Count', angle: -90, position: 'insideLeft', fill: 'var(--muted-foreground)', fontSize: 12 }} />
+                  <Tooltip
+                    formatter={(v: number) => [v, 'Count']}
+                    cursor={{ fill: 'var(--muted)' }}
+                    contentStyle={{ borderRadius: 8, border: '1px solid var(--border)', fontSize: 13 }}
+                  />
+                  <Bar dataKey="count" fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        )}
+      </ResultPanel>
+    </CalculatorGrid>
   )
 }
