@@ -310,15 +310,16 @@ test.describe('Body fat calculator', () => {
 })
 
 test.describe('Macro calculator', () => {
+  // first(): the pie chart's legend repeats the macro names, and its card follows the result figures
   const stat = (page: Page, label: string) =>
-    page.locator('#macro-results > .grid > [data-slot="card"]').filter({ has: page.getByText(label, { exact: true }) }).locator('p').nth(1)
+    cardWithTitle(page.locator('#macro-results'), label).locator('[data-slot="card-content"]').first()
 
   async function expectMacros(page: Page, tdee: number, goal: 'cut' | 'maintain' | 'bulk', split: 'balanced' | 'lowCarb' | 'highProtein') {
     const expected = calculateMacro({ tdee, goal, split })
     await expect(stat(page, 'Calories')).toHaveText(String(Math.round(expected.calories)))
-    await expect(stat(page, 'Protein')).toHaveText(String(Math.round(expected.proteinG)))
-    await expect(stat(page, 'Carbs')).toHaveText(String(Math.round(expected.carbsG)))
-    await expect(stat(page, 'Fat')).toHaveText(String(Math.round(expected.fatG)))
+    await expect(stat(page, 'Protein')).toHaveText(`${Math.round(expected.proteinG)} g`)
+    await expect(stat(page, 'Carbs')).toHaveText(`${Math.round(expected.carbsG)} g`)
+    await expect(stat(page, 'Fat')).toHaveText(`${Math.round(expected.fatG)} g`)
   }
 
   test('renders with default result, guide, FAQ, canonical and JSON-LD', async ({ page }) => {
