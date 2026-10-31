@@ -20,9 +20,20 @@ function matchCalculators(query: string) {
 interface CalculatorSearchProps {
   onNavigate?: () => void
   className?: string
+  size?: 'default' | 'large'
 }
 
-export function CalculatorSearch({ onNavigate, className = '' }: CalculatorSearchProps) {
+const INPUT_SIZE_CLASSES = {
+  default: 'h-11 pl-9 text-base md:h-9 md:text-sm',
+  large: 'h-14 pl-12 text-lg shadow-[0_1px_2px_rgba(20,27,45,0.04),0_8px_24px_-18px_rgba(20,27,45,0.22)]',
+}
+
+const ICON_SIZE_CLASSES = {
+  default: 'left-3 h-4 w-4',
+  large: 'left-4 h-5 w-5',
+}
+
+export function CalculatorSearch({ onNavigate, className = '', size = 'default' }: CalculatorSearchProps) {
   const router = useRouter()
   const listId = useId()
   const [query, setQuery] = useState('')
@@ -63,7 +74,7 @@ export function CalculatorSearch({ onNavigate, className = '' }: CalculatorSearc
 
   return (
     <div className={`relative ${className}`}>
-      <Search aria-hidden className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      <Search aria-hidden className={`pointer-events-none absolute top-1/2 -translate-y-1/2 text-muted-foreground ${ICON_SIZE_CLASSES[size]}`} />
       <input
         type="search"
         role="combobox"
@@ -83,7 +94,7 @@ export function CalculatorSearch({ onNavigate, className = '' }: CalculatorSearc
         onFocus={() => setIsOpen(true)}
         onBlur={() => setIsOpen(false)}
         onKeyDown={handleKeyDown}
-        className="h-11 w-full rounded-md border border-border bg-card pl-9 pr-3 text-base text-foreground outline-none transition-colors placeholder:text-muted-foreground hover:border-input focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/25 md:h-9 md:text-sm [&::-webkit-search-cancel-button]:hidden"
+        className={`w-full rounded-md border border-border bg-card pr-3 text-foreground outline-none transition-colors placeholder:text-muted-foreground hover:border-input focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/25 [&::-webkit-search-cancel-button]:hidden ${INPUT_SIZE_CLASSES[size]}`}
       />
       {showList && (
         <ul
