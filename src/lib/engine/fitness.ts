@@ -85,8 +85,38 @@ export interface BodyFatResult {
   category: string
 }
 
-export function calculateBodyFat(_inputs: BodyFatInputs): BodyFatResult {
-  throw new Error('Not implemented')
+export function calculateBodyFat(inputs: BodyFatInputs): BodyFatResult {
+  const { gender, heightCm, neckCm, waistCm, hipCm } = inputs
+
+  let bf: number
+  if (gender === 'male') {
+    const logArg = Math.max(waistCm - neckCm, 0.001)
+    bf = 495 / (1.0324 - 0.19077 * Math.log10(logArg) + 0.15456 * Math.log10(heightCm)) - 450
+  } else {
+    const logArg = Math.max(waistCm + hipCm - neckCm, 0.001)
+    bf = 495 / (1.29579 - 0.35004 * Math.log10(logArg) + 0.22100 * Math.log10(heightCm)) - 450
+  }
+
+  // Clamped log10 arguments still yield a negative percentage; floor at 0 so invalid tapes show a safe minimum.
+  bf = Math.max(0, bf)
+  const bodyFatPercentage = Math.round(bf * 10) / 10
+
+  let category: string
+  if (gender === 'male') {
+    if (bf < 6)       category = 'Essential'
+    else if (bf < 14) category = 'Athletes'
+    else if (bf < 18) category = 'Fitness'
+    else if (bf < 25) category = 'Acceptable'
+    else              category = 'Obese'
+  } else {
+    if (bf < 14)      category = 'Essential'
+    else if (bf < 21) category = 'Athletes'
+    else if (bf < 25) category = 'Fitness'
+    else if (bf < 32) category = 'Acceptable'
+    else              category = 'Obese'
+  }
+
+  return { bodyFatPercentage, fatMassKg: 0, leanMassKg: 0, category }
 }
 
 // --- Macro ---
