@@ -4,8 +4,11 @@ import { useCalculatorUrl, type Schema } from '@/lib/hooks/use-calculator-url'
 import { calculateRetirement, type RetirementInputs } from '@/lib/engine/financial'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { ExportButtons } from '@/components/common/ExportButtons'
+import { Field } from '@/components/common/Field'
+import { CalculatorGrid, InputPanel, ResultPanel } from '@/components/common/CalculatorLayout'
+import { ResultHero, ResultStat, ResultStats } from '@/components/common/Result'
+import { ResultActions } from '@/components/common/ResultActions'
+import { MobileResultBar } from '@/components/common/MobileResultBar'
 
 const SCHEMA = {
   currentAge:      { param: 'age',        default: 30,     parse: Number, serialize: String },
@@ -18,6 +21,8 @@ const SCHEMA = {
 
 const fmt = (n: number) =>
   new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n)
+
+const AXIS_TICK = { fill: 'var(--muted-foreground)', fontSize: 12 }
 
 export function RetirementCalculator() {
   const [inputs, setValues] = useCalculatorUrl(SCHEMA)
@@ -34,37 +39,47 @@ export function RetirementCalculator() {
     (inputs.currentSavings > 0 || inputs.annualSavings > 0)
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-8">
-      <Card>
-        <CardHeader><CardTitle>Inputs</CardTitle></CardHeader>
-        <CardContent className="space-y-4">
-          {[
-            { label: 'Current Age', key: 'currentAge' as const },
-            { label: 'Retirement Age', key: 'retirementAge' as const },
-            { label: 'Current Savings ($)', key: 'currentSavings' as const, prefix: '$' },
-            { label: 'Annual Savings ($)', key: 'annualSavings' as const, prefix: '$' },
-            { label: 'Expected Annual Return (%)', key: 'expectedReturn' as const, suffix: '%' },
-            { label: 'Annual Expenses in Retirement ($)', key: 'annualExpenses' as const, prefix: '$' },
-          ].map(({ label, key, prefix, suffix }) => (
-            <div key={key}>
-              <label className="text-sm font-medium mb-1 block">{label}</label>
-              <div className="relative">
-                {prefix && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{prefix}</span>}
-                <Input
-                  type="number"
-                  value={inputs[key]}
-                  onChange={e => setValues({ [key]: Number(e.target.value) } as Partial<RetirementInputs>)}
-                  className={prefix ? 'pl-7' : suffix ? 'pr-7' : ''}
-                />
-                {suffix && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{suffix}</span>}
-              </div>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
+    <CalculatorGrid>
+      <InputPanel title="Inputs">
+        {[
+          { label: 'Current Age', key: 'currentAge' as const },
+          { label: 'Retirement Age', key: 'retirementAge' as const },
+          { label: 'Current Savings ($)', key: 'currentSavings' as const, prefix: '$' },
+          { label: 'Annual Savings ($)', key: 'annualSavings' as const, prefix: '$' },
+          { label: 'Expected Annual Return (%)', key: 'expectedReturn' as const, suffix: '%' },
+          { label: 'Annual Expenses in Retirement ($)', key: 'annualExpenses' as const, prefix: '$' },
+        ].map(({ label, key, prefix, suffix }) => (
+          <Field
+            key={key}
+            label={label}
+            prefix={prefix}
+            suffix={suffix}
+            type="number"
+            value={inputs[key]}
+            onChange={e => setValues({ [key]: Number(e.target.value) } as Partial<RetirementInputs>)}
+          />
+        ))}
+      </InputPanel>
 
-      <div id="retirement-results" className="space-y-6">
-        <ExportButtons
+      <ResultPanel id="retirement-results">
+        <ResultHero
+          label="Balance at Retirement"
+          value={fmt(result.balanceAtRetirement)}
+          caption={`Projected savings at age ${inputs.retirementAge}`}
+        />
+
+        <ResultStats>
+          <ResultStat
+            label="Years of Funding"
+            value={result.projectedRunout === null ? '50+ years' : `${result.yearsOfFunding} years`}
+          />
+          <ResultStat
+            label="Funds Run Out"
+            value={result.projectedRunout === null ? 'Never' : `Age ${result.projectedRunout}`}
+          />
+        </ResultStats>
+
+        <ResultActions
           resultsId="retirement-results"
           filename="retirement-projection"
           csvRows={allPoints.map((point) => ({
@@ -72,48 +87,36 @@ export function RetirementCalculator() {
             Phase: point.phase,
             Balance: point.balance.toFixed(2),
           }))}
-          disabled={!canExport}
+          canExport={canExport}
         />
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Card>
-            <CardHeader><CardTitle className="text-sm font-medium text-muted-foreground">Balance at Retirement</CardTitle></CardHeader>
-            <CardContent><p className="text-2xl font-bold">{fmt(result.balanceAtRetirement)}</p></CardContent>
-          </Card>
-          <Card>
-            <CardHeader><CardTitle className="text-sm font-medium text-muted-foreground">Years of Funding</CardTitle></CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">
-                {result.projectedRunout === null ? '50+ years' : `${result.yearsOfFunding} years`}
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader><CardTitle className="text-sm font-medium text-muted-foreground">Funds Run Out</CardTitle></CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">
-                {result.projectedRunout === null ? 'Never' : `Age ${result.projectedRunout}`}
-              </p>
-            </CardContent>
-          </Card>
-        </div>
 
         <Card>
           <CardHeader><CardTitle>Balance Over Time</CardTitle></CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={allPoints}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="age" label={{ value: 'Age', position: 'insideBottom', offset: -2 }} />
-                <YAxis tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
-                <Tooltip formatter={(v: number) => fmt(v)} labelFormatter={l => `Age ${l}`} />
-                <ReferenceLine x={inputs.retirementAge} stroke="#ef4444" strokeDasharray="4 4" label="Retirement" />
-                <Line type="monotone" dataKey="balance" stroke="#6366f1" dot={false} name="Balance" />
+              <LineChart data={allPoints} margin={{ top: 16, right: 16, left: 16, bottom: 4 }}>
+                <CartesianGrid stroke="var(--border)" vertical={false} />
+                <XAxis dataKey="age" tickFormatter={(v: number) => `Age ${v}`} tick={AXIS_TICK} tickLine={false} axisLine={false} />
+                <YAxis tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} tick={AXIS_TICK} tickLine={false} axisLine={false} />
+                <Tooltip
+                  formatter={(v: number) => fmt(v)}
+                  labelFormatter={l => `Age ${l}`}
+                  contentStyle={{ borderRadius: 8, border: '1px solid var(--border)', fontSize: 13 }}
+                />
+                <ReferenceLine
+                  x={inputs.retirementAge}
+                  stroke="var(--muted-foreground)"
+                  strokeDasharray="4 4"
+                  label={{ value: 'Retirement', position: 'top', fill: 'var(--muted-foreground)', fontSize: 12 }}
+                />
+                <Line type="monotone" dataKey="balance" stroke="var(--chart-1)" strokeWidth={2} dot={false} name="Balance" />
               </LineChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
-      </div>
-    </div>
+      </ResultPanel>
+
+      <MobileResultBar targetId="retirement-results" value={fmt(result.balanceAtRetirement)} caption="at retirement" />
+    </CalculatorGrid>
   )
 }
