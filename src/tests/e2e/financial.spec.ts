@@ -12,8 +12,8 @@ test.describe('Financial Pillar', () => {
   test('mortgage calculator renders and shows result', async ({ page }) => {
     await page.goto('/financial/mortgage')
     await expect(page.getByRole('heading', { name: 'Mortgage Calculator' })).toBeVisible()
-    await expect(page.getByText('Monthly P&I')).toBeVisible()
-    await expect(page.getByText('Yearly Summary')).toBeVisible()
+    await expect(page.getByText('Monthly P&I', { exact: true })).toBeVisible()
+    await expect(page.getByRole('tab', { name: 'Yearly Summary' })).toBeVisible()
   })
 
   test('mortgage URL state is preserved on reload', async ({ page }) => {
@@ -25,13 +25,13 @@ test.describe('Financial Pillar', () => {
   test('compound interest calculator renders with chart', async ({ page }) => {
     await page.goto('/financial/compound-interest')
     await expect(page.getByRole('heading', { name: 'Compound Interest Calculator' })).toBeVisible()
-    await expect(page.getByText('Future Value')).toBeVisible()
+    await expect(page.getByText('Future Value', { exact: true })).toBeVisible()
   })
 
   test('retirement calculator renders with chart', async ({ page }) => {
     await page.goto('/financial/retirement')
     await expect(page.getByRole('heading', { name: 'Retirement Calculator' })).toBeVisible()
-    await expect(page.getByText('Balance at Retirement')).toBeVisible()
+    await expect(page.getByText('Balance at Retirement', { exact: true })).toBeVisible()
   })
 
   test('auto loan calculator renders', async ({ page }) => {
