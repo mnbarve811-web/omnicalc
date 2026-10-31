@@ -75,8 +75,25 @@ export interface MacroResult {
   fatG: number
 }
 
-export function calculateMacro(_inputs: MacroInputs): MacroResult {
-  throw new Error('Not implemented')
+export function calculateMacro(inputs: MacroInputs): MacroResult {
+  if (inputs.tdee <= 0) return { calories: 0, proteinG: 0, carbsG: 0, fatG: 0 }
+
+  const calorieMult = { cut: 0.8, maintain: 1, bulk: 1.15 }
+  const calories = inputs.tdee * calorieMult[inputs.goal]
+
+  const ratios = {
+    balanced:    { protein: 30, carbs: 40, fat: 30 },
+    lowCarb:     { protein: 35, carbs: 25, fat: 40 },
+    highProtein: { protein: 40, carbs: 35, fat: 25 },
+  }
+  const { protein, carbs, fat } = ratios[inputs.split]
+
+  return {
+    calories,
+    proteinG: calories * (protein / 100) / 4,
+    carbsG:   calories * (carbs / 100) / 4,
+    fatG:     calories * (fat / 100) / 9,
+  }
 }
 
 // --- Pregnancy Due Date ---
