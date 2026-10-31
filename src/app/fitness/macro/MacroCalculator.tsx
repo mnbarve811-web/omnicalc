@@ -3,6 +3,7 @@
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { ExportButtons } from '@/components/common/ExportButtons'
 import { useCalculatorUrl, type Schema } from '@/lib/hooks/use-calculator-url'
 import { calculateMacro, type MacroInputs, type MacroGoal, type MacroSplit } from '@/lib/engine/fitness'
 
@@ -51,6 +52,8 @@ export function MacroCalculator() {
     { name: 'Carbs',   value: Math.round(result.carbsG * 4) },
     { name: 'Fat',     value: Math.round(result.fatG * 9) },
   ]
+
+  const canExport = values.tdee > 0
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-8">
@@ -116,7 +119,19 @@ export function MacroCalculator() {
       </Card>
 
       {/* Right column: results */}
-      <div className="space-y-6">
+      <div id="macro-results" className="space-y-6">
+        <ExportButtons
+          resultsId="macro-results"
+          filename="macro-breakdown"
+          csvRows={[
+            { Macro: 'Protein', 'Grams per Day': Math.round(result.proteinG), 'Calories per Day': pieData[0].value },
+            { Macro: 'Carbs',   'Grams per Day': Math.round(result.carbsG),   'Calories per Day': pieData[1].value },
+            { Macro: 'Fat',     'Grams per Day': Math.round(result.fatG),     'Calories per Day': pieData[2].value },
+            { Macro: 'Total',   'Grams per Day': '',                          'Calories per Day': Math.round(result.calories) },
+          ]}
+          disabled={!canExport}
+        />
+
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[
             { label: 'Calories', value: Math.round(result.calories), unit: 'kcal' },
