@@ -4,6 +4,7 @@ import { useCalculatorUrl, type Schema } from '@/lib/hooks/use-calculator-url'
 import { calculatePregnancy, type PregnancyInputs } from '@/lib/engine/fitness'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { ExportButtons } from '@/components/common/ExportButtons'
 
 function tenWeeksAgo(): string {
   const now = new Date()
@@ -45,6 +46,9 @@ export function PregnancyCalculator() {
   // Position of marker as a percentage of the 40-week bar (clamped 0–100)
   const markerPct = Math.min(100, Math.max(0, (currentWeek / 40) * 100))
 
+  const lmp = values.lastMenstrualPeriod
+  const canExport = /^\d{4}-\d{2}-\d{2}$/.test(lmp) && !isNaN(Date.parse(lmp))
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-8">
       {/* Left column: input */}
@@ -71,7 +75,19 @@ export function PregnancyCalculator() {
       </Card>
 
       {/* Right column: results */}
-      <div className="space-y-6">
+      <div id="pregnancy-results" className="space-y-6">
+        <ExportButtons
+          resultsId="pregnancy-results"
+          filename="pregnancy-due-date"
+          csvRows={[
+            { Milestone: 'Last Menstrual Period', Value: formatDate(lmp) },
+            { Milestone: 'Estimated Due Date',    Value: formatDate(dueDate) },
+            { Milestone: 'Current Week',          Value: `Week ${currentWeek} of 40` },
+            { Milestone: 'Current Trimester',     Value: TRIMESTER_LABELS[trimester - 1] },
+          ]}
+          disabled={!canExport}
+        />
+
         {/* Summary cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Card>

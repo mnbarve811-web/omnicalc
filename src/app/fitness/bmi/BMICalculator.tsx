@@ -4,6 +4,7 @@ import { useCalculatorUrl, type Schema } from '@/lib/hooks/use-calculator-url'
 import { calculateBMI, type BMIInputs } from '@/lib/engine/fitness'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { ExportButtons } from '@/components/common/ExportButtons'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
 const SCHEMA = {
@@ -35,6 +36,7 @@ export function BMICalculator() {
   const result = calculateBMI(values)
   const markerPct = bmiToPercent(result.value)
   const activeCategory = CATEGORIES.find(c => c.label === result.category)
+  const canExport = values.weightKg > 0 && values.heightCm > 0
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-8">
@@ -64,7 +66,18 @@ export function BMICalculator() {
       </Card>
 
       {/* Right: Results */}
-      <div className="space-y-6">
+      <div id="bmi-results" className="space-y-6">
+        <ExportButtons
+          resultsId="bmi-results"
+          filename="bmi-result"
+          csvRows={CATEGORIES.map(c => ({
+            Category: c.label,
+            'BMI Range': c.range,
+            'Your BMI': result.category === c.label ? result.value.toFixed(1) : '',
+          }))}
+          disabled={!canExport}
+        />
+
         <Card>
           <CardContent className="pt-6 flex items-center gap-6">
             <div>

@@ -14,6 +14,7 @@ import {
 } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { ExportButtons } from '@/components/common/ExportButtons'
 
 const SCHEMA = {
   gender:        { param: 'gender',   default: 'male' as GenderBiological, parse: s => s as GenderBiological, serialize: s => s },
@@ -43,6 +44,8 @@ export function TDEECalculator() {
     { name: 'Maintain', calories: Math.round(result.maintain), fill: '#2563eb' },
     { name: 'Bulk',     calories: Math.round(result.bulk),     fill: '#16a34a' },
   ]
+
+  const canExport = values.weightKg > 0 && values.heightCm > 0 && values.ageYears > 0
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-8">
@@ -142,7 +145,19 @@ export function TDEECalculator() {
       </Card>
 
       {/* Right column: results */}
-      <div className="space-y-6">
+      <div id="tdee-results" className="space-y-6">
+        <ExportButtons
+          resultsId="tdee-results"
+          filename="tdee-calories"
+          csvRows={[
+            { Metric: 'Basal Metabolic Rate (BMR)', 'Calories per Day': Math.round(result.bmr) },
+            { Metric: 'Cut (20% deficit)',          'Calories per Day': Math.round(result.cut) },
+            { Metric: 'Maintain (TDEE)',            'Calories per Day': Math.round(result.maintain) },
+            { Metric: 'Bulk (15% surplus)',         'Calories per Day': Math.round(result.bulk) },
+          ]}
+          disabled={!canExport}
+        />
+
         {/* BMR summary */}
         <Card>
           <CardHeader>

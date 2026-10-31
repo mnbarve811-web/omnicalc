@@ -4,6 +4,7 @@ import { useCalculatorUrl, type Schema } from '@/lib/hooks/use-calculator-url'
 import { calculateBodyFat, type BodyFatInputs, type GenderBiological } from '@/lib/engine/fitness'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { ExportButtons } from '@/components/common/ExportButtons'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
 const SCHEMA = {
@@ -46,6 +47,11 @@ export function BodyFatCalculator() {
   const result = calculateBodyFat(values)
   const categories = values.gender === 'male' ? MALE_CATEGORIES : FEMALE_CATEGORIES
   const badgeClass = CATEGORY_COLORS[result.category] ?? 'bg-gray-100 text-gray-800'
+  const canExport =
+    values.heightCm > 0 &&
+    values.neckCm > 0 &&
+    values.waistCm > 0 &&
+    (values.gender === 'male' || values.hipCm > 0)
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-8">
@@ -100,7 +106,18 @@ export function BodyFatCalculator() {
         </CardContent>
       </Card>
 
-      <div className="space-y-6">
+      <div id="body-fat-results" className="space-y-6">
+        <ExportButtons
+          resultsId="body-fat-results"
+          filename="body-fat-percentage"
+          csvRows={categories.map(cat => ({
+            Category: cat.label,
+            [`Range (${values.gender === 'male' ? 'Male' : 'Female'})`]: cat.range,
+            'Your Body Fat %': cat.label === result.category ? result.bodyFatPercentage.toFixed(1) : '',
+          }))}
+          disabled={!canExport}
+        />
+
         <Card>
           <CardHeader><CardTitle>Result</CardTitle></CardHeader>
           <CardContent className="flex items-center gap-6">
