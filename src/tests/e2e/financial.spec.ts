@@ -337,8 +337,7 @@ test.describe('Financial calculators', () => {
       await expectExportDisabled(page)
     })
 
-    // Bug: calculateAutoLoan has no zero-term guard (mortgage has one), so the card renders "$∞"
-    test.fixme('a zero-month term shows a finite payment', async ({ page }) => {
+    test('a zero-month term shows a finite payment', async ({ page }) => {
       await page.goto('/financial/auto-loan?term=0')
       await expect(field(page, 'Loan Term (months)')).toHaveValue('0')
       await expect(cardValue(page, 'Monthly Payment')).toHaveText('$0')
@@ -386,8 +385,7 @@ test.describe('Financial calculators', () => {
       await expectExportDisabled(page)
     })
 
-    // Bug: the freq URL param is cast to PayFrequency unchecked, so an unknown value makes annual totals NaN
-    test.fixme('an unknown pay frequency in the URL does not show NaN', async ({ page }) => {
+    test('an unknown pay frequency in the URL does not show NaN', async ({ page }) => {
       await page.goto('/financial/salary?freq=fortnightly')
       await expect(cardValue(page, 'Net Pay (per period)')).toBeVisible()
       await expect(page.locator('#salary-results')).not.toContainText('NaN')
@@ -451,8 +449,7 @@ test.describe('Financial calculators', () => {
       await expectExportDisabled(page)
     })
 
-    // Bug: calculateDebtPayoff picks the target debt by name, so two debts sharing a name both get the full budget
-    test.fixme('two debts with the same name are paid off one at a time', async ({ page }) => {
+    test('two debts with the same name are paid off one at a time', async ({ page }) => {
       await page.goto('/financial/debt-payoff')
       const secondRow = debtRows(page).nth(1).locator('input')
       await secondRow.nth(0).fill('Credit Card')
