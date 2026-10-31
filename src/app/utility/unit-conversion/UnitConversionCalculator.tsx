@@ -4,6 +4,7 @@ import { useCalculatorUrl, type Schema } from '@/lib/hooks/use-calculator-url'
 import { calculateConversion, type ConversionInputs, type UnitCategory } from '@/lib/engine/utility'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { ExportButtons } from '@/components/common/ExportButtons'
 
 const UNITS_PER_CATEGORY: Record<UnitCategory, string[]> = {
   length:      ['m', 'km', 'mi', 'ft', 'in', 'cm', 'yd'],
@@ -29,6 +30,12 @@ export function UnitConversionCalculator() {
 
   const result = calculateConversion(values)
   const units = UNITS_PER_CATEGORY[values.category]
+  const canExport =
+    Number.isFinite(values.value) &&
+    values.value !== 0 &&
+    units.includes(values.fromUnit) &&
+    units.includes(values.toUnit) &&
+    Number.isFinite(result.result)
 
   function handleCategoryChange(newCategory: UnitCategory) {
     const newUnits = UNITS_PER_CATEGORY[newCategory]
@@ -108,7 +115,20 @@ export function UnitConversionCalculator() {
         </div>
 
         {/* Result */}
-        <div className="border-t pt-4">
+        <div id="unit-conversion-results" className="border-t pt-4">
+          <ExportButtons
+            resultsId="unit-conversion-results"
+            filename="unit-conversion"
+            csvRows={[{
+              Category: CATEGORIES.find((cat) => cat.value === values.category)?.label ?? values.category,
+              'From Value': values.value,
+              'From Unit': values.fromUnit,
+              'To Value': Number(result.result.toPrecision(7)),
+              'To Unit': values.toUnit,
+              Formula: result.formula,
+            }]}
+            disabled={!canExport}
+          />
           <p className="text-sm text-muted-foreground mb-1">Result</p>
           <p className="text-4xl font-bold">
             {Number(result.result.toPrecision(7)).toString()} <span className="text-2xl font-normal text-muted-foreground">{values.toUnit}</span>
