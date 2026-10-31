@@ -4,12 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 
 export const metadata: Metadata = {
   title: 'Math & Scientific Calculators',
-  description: 'Free math calculators for statistics, percentages, fractions, and quadratic equations.',
+  description: 'Free math calculators for statistics, scientific expressions, percentages, fractions, and quadratic equations.',
   alternates: { canonical: '/math' },
 }
 
 const CALCULATORS = [
   { title: 'Statistics Calculator', description: 'Calculate mean, median, mode, standard deviation, variance, and more from any dataset.', href: '/math/statistics' },
+  { title: 'Scientific Calculator', description: 'Evaluate expressions with sin, cos, tan, logs, powers, roots, and factorials in degrees or radians.', href: '/math/scientific' },
   { title: 'Percentage Calculator', description: 'Find what percent X is of Y, calculate percentage change, or find X% of any number.', href: '/math/percentage' },
   { title: 'Fractions Calculator', description: 'Add, subtract, multiply, and divide fractions with fully simplified results and mixed numbers.', href: '/math/fractions' },
   { title: 'Quadratic Equation Solver', description: 'Solve ax² + bx + c = 0 instantly — get real roots, discriminant, and step-by-step display.', href: '/math/quadratic' },
