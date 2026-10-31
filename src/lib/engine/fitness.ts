@@ -37,8 +37,29 @@ export interface TDEEResult {
   bulk: number     // tdee + 15%
 }
 
-export function calculateTDEE(_inputs: TDEEInputs): TDEEResult {
-  throw new Error('Not implemented')
+const ACTIVITY_MULTIPLIERS: Record<ActivityLevel, number> = {
+  sedentary: 1.2,
+  light:     1.375,
+  moderate:  1.55,
+  heavy:     1.725,
+  athlete:   1.9,
+}
+
+export function calculateTDEE(inputs: TDEEInputs): TDEEResult {
+  const { gender, activityLevel } = inputs
+  const weightKg = Math.max(1, inputs.weightKg)
+  const heightCm = Math.max(1, inputs.heightCm)
+  const ageYears = Math.max(1, inputs.ageYears)
+  const offset = gender === 'male' ? 5 : -161
+  const bmr = 10 * weightKg + 6.25 * heightCm - 5 * ageYears + offset
+  const tdee = bmr * ACTIVITY_MULTIPLIERS[activityLevel]
+  return {
+    bmr,
+    tdee,
+    cut:      tdee * 0.8,
+    maintain: tdee,
+    bulk:     tdee * 1.15,
+  }
 }
 
 // --- Body Fat (US Navy Method) ---
