@@ -112,15 +112,15 @@ export function MortgageCalculator() {
   const downPercent = values.homePrice > 0 ? Math.min(100, Math.max(0, (values.downPayment / values.homePrice) * 100)) : 0
 
   function updateLumpSum(index: number, patch: Partial<LumpSum>) {
-    setValues({ lumpSums: values.lumpSums.map((lump, i) => (i === index ? { ...lump, ...patch } : lump)) })
+    setValues(current => ({ lumpSums: current.lumpSums.map((lump, i) => (i === index ? { ...lump, ...patch } : lump)) }))
   }
 
   function addLumpSum() {
-    setValues({ lumpSums: [...values.lumpSums, { month: Math.min(12, Math.max(1, termMonths)), amount: 5000 }] })
+    setValues(current => ({ lumpSums: [...current.lumpSums, { month: Math.min(12, Math.max(1, termMonths)), amount: 5000 }] }))
   }
 
   function removeLumpSum(index: number) {
-    setValues({ lumpSums: values.lumpSums.filter((_, i) => i !== index) })
+    setValues(current => ({ lumpSums: current.lumpSums.filter((_, i) => i !== index) }))
   }
 
   const yearlyData: YearlyRow[] = []

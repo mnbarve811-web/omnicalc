@@ -242,6 +242,14 @@ test.describe('Financial calculators', () => {
       await expect(page).not.toHaveURL(/lump=/)
     })
 
+    test('quick edits to a lump sum month and amount are both kept', async ({ page }) => {
+      await page.goto('/financial/mortgage?lump=12~5000')
+      const row = page.getByRole('group', { name: 'Lump sum 1' })
+      await row.locator('input').nth(0).fill('24')
+      await row.locator('input').nth(1).fill('9000')
+      await expect.poll(() => new URL(page.url()).searchParams.get('lump')).toBe('24~9000')
+    })
+
     test('a lump sum month outside the term shows an error and is ignored', async ({ page }) => {
       await page.goto('/financial/mortgage?lump=999~5000')
       await expect(page.getByText('Enter a whole month from 1 to 360', { exact: true })).toBeVisible()
@@ -795,6 +803,17 @@ test.describe('Financial calculators', () => {
         extraMonthlyPayment: 0,
       })
       await expect(cardValue(page, 'Months to Debt-Free')).toHaveText(String(distinct.monthsToDebtFree))
+    })
+
+    test('quick edits to several fields of one debt are all kept', async ({ page }) => {
+      await page.goto('/financial/debt-payoff')
+      const secondRow = debtRows(page).nth(1).locator('input')
+      // No waits between edits: each one must build on the previous edit, not on the last render
+      await secondRow.nth(0).fill('Store Card')
+      await secondRow.nth(1).fill('4000')
+      await secondRow.nth(2).fill('25')
+      await secondRow.nth(3).fill('80')
+      await expectDebtsInUrl(page, [DEFAULT_DEBTS[0], { name: 'Store Card', balance: 4000, interestRate: 25, minimumPayment: 80 }])
     })
 
     test('debts and lump sums restore from the URL', async ({ page }) => {

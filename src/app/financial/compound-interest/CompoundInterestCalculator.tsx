@@ -106,15 +106,15 @@ export function CompoundInterestCalculator() {
   ]
 
   function updateExtra(index: number, patch: Partial<AdditionalContribution>) {
-    setValues({ additionalContributions: extras.map((e, i) => i === index ? { ...e, ...patch } : e) })
+    setValues(current => ({ additionalContributions: current.additionalContributions.map((e, i) => i === index ? { ...e, ...patch } : e) }))
   }
 
   function addExtra() {
-    setValues({ additionalContributions: [...extras, { year: Math.min(5, Math.max(1, inputs.years)), amount: 1000 }] })
+    setValues(current => ({ additionalContributions: [...current.additionalContributions, { year: Math.min(5, Math.max(1, inputs.years)), amount: 1000 }] }))
   }
 
   function removeExtra(index: number) {
-    setValues({ additionalContributions: extras.filter((_, i) => i !== index) })
+    setValues(current => ({ additionalContributions: current.additionalContributions.filter((_, i) => i !== index) }))
   }
 
   return (

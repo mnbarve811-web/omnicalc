@@ -117,28 +117,28 @@ export function DebtPayoffCalculator() {
   function updateDebt(i: number, field: keyof DebtItem, value: string) {
     // Inputs hand back strings; numeric fields must be converted or the engine's `+=` concatenates text
     const next = field === 'name' ? value : Math.max(0, Number(value))
-    setSettings({ debts: debts.map((d, idx) => idx === i ? { ...d, [field]: next } : d) })
+    setSettings(current => ({ debts: current.debts.map((d, idx) => idx === i ? { ...d, [field]: next } : d) }))
   }
 
   function addDebt() {
-    setSettings({ debts: [...debts, { name: `Debt ${debts.length + 1}`, balance: 1000, interestRate: 10, minimumPayment: 25 }] })
+    setSettings(current => ({ debts: [...current.debts, { name: `Debt ${current.debts.length + 1}`, balance: 1000, interestRate: 10, minimumPayment: 25 }] }))
   }
 
   function removeDebt(i: number) {
-    setSettings({ debts: debts.filter((_, idx) => idx !== i) })
+    setSettings(current => ({ debts: current.debts.filter((_, idx) => idx !== i) }))
   }
 
   function updateLumpSum(i: number, field: keyof LumpSumPayment, value: string) {
     const next = field === 'month' ? Math.max(1, Math.floor(Number(value))) : Math.max(0, Number(value))
-    setSettings({ lumpSums: lumpSums.map((l, idx) => idx === i ? { ...l, [field]: next } : l) })
+    setSettings(current => ({ lumpSums: current.lumpSums.map((l, idx) => idx === i ? { ...l, [field]: next } : l) }))
   }
 
   function addLumpSum() {
-    setSettings({ lumpSums: [...lumpSums, { month: 12, amount: 1000 }] })
+    setSettings(current => ({ lumpSums: [...current.lumpSums, { month: 12, amount: 1000 }] }))
   }
 
   function removeLumpSum(i: number) {
-    setSettings({ lumpSums: lumpSums.filter((_, idx) => idx !== i) })
+    setSettings(current => ({ lumpSums: current.lumpSums.filter((_, idx) => idx !== i) }))
   }
 
   return (
