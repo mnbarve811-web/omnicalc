@@ -62,12 +62,13 @@ export function useCalculatorUrl<T extends Record<string, unknown>>(
 // URLs are untrusted input, and every item adds work to the per-month simulations
 const MAX_LIST_ITEMS = 50
 
-// '_' and '~' are left alone by encodeURIComponent, so they are escaped by hand to keep them free as separators
+// Only the separators and '%' are escaped: URLSearchParams percent-encodes the rest, and a full
+// encodeURIComponent here would double-encode (a space would reach the URL as %2520)
 function encodeListPart(part: string | number): string {
-  return encodeURIComponent(String(part)).replace(/[_~]/g, c => `%${c.charCodeAt(0).toString(16).toUpperCase()}`)
+  return String(part).replace(/[%_~]/g, c => `%${c.charCodeAt(0).toString(16).toUpperCase()}`)
 }
 
-// Items are joined by '_' and their fields by '~'; both survive URLSearchParams unencoded, so links stay readable
+// Items are joined by '_' and their fields by '~'
 export function listField<Item extends object>(
   param: string,
   defaultValue: Item[],

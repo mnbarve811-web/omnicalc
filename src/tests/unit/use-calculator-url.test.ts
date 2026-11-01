@@ -130,6 +130,13 @@ describe('listField', () => {
     expect(named.parse(named.serialize(items))).toEqual(items)
   })
 
+  it('leaves ordinary characters for URLSearchParams to encode once', () => {
+    const raw = named.serialize([{ name: 'Car loan 100%', balance: 5 }])
+    expect(raw).toBe('Car loan 100%25~5')
+    expect(new URLSearchParams({ debts: raw }).toString()).toBe('debts=Car+loan+100%2525%7E5')
+    expect(named.parse(new URLSearchParams(new URLSearchParams({ debts: raw }).toString()).get('debts')!)).toEqual([{ name: 'Car loan 100%', balance: 5 }])
+  })
+
   it('parses an empty string as an empty list', () => {
     expect(lumpSums.parse('')).toEqual([])
   })
