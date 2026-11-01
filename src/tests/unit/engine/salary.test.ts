@@ -209,6 +209,8 @@ describe('calculateSalary FICA limits', () => {
     const r = calculateSalary({ ...BASE, grossPay: 20000 })
     expect(r.socialSecurity).toBeCloseTo(184500 * 0.062 / 12, 6)
     expect(r.socialSecurity).toBeCloseTo(953.25, 6)
+    expect(r.isSocialSecurityCapped).toBe(true)
+    expect(calculateSalary(BASE).isSocialSecurityCapped).toBe(false)
   })
 
   it('applies the uncapped 1.45% Medicare plus 0.9% above $200,000', () => {

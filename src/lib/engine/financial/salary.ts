@@ -42,9 +42,10 @@ export interface SalaryResult {
   annualBasePay: number
   annualOvertimePay: number
   equivalentHourlyRate: number
+  isSocialSecurityCapped: boolean
 }
 
-const PERIODS_PER_YEAR: Record<PayFrequency, number> = {
+export const PAY_PERIODS_PER_YEAR: Record<PayFrequency, number> = {
   weekly: 52,
   biweekly: 26,
   semimonthly: 24,
@@ -81,7 +82,7 @@ export function calculateSalary(inputs: SalaryInputs): SalaryResult {
     pretaxHealth = 0,
   } = inputs
 
-  const periods = PERIODS_PER_YEAR[payFrequency]
+  const periods = PAY_PERIODS_PER_YEAR[payFrequency]
   const isHourly = payType === 'hourly'
 
   const annualBasePay = isHourly ? hourlyRate * hoursPerWeek * WEEKS_PER_YEAR : grossPay * periods
@@ -137,5 +138,6 @@ export function calculateSalary(inputs: SalaryInputs): SalaryResult {
     annualBasePay,
     annualOvertimePay,
     equivalentHourlyRate,
+    isSocialSecurityCapped: ficaWages > SOCIAL_SECURITY_WAGE_BASE,
   }
 }
