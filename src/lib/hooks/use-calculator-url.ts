@@ -14,7 +14,7 @@ export type Schema<T> = { [K in keyof T]: FieldDef<T[K]> }
 
 export function useCalculatorUrl<T extends Record<string, unknown>>(
   schema: Schema<T>
-): [T, (patch: Partial<T>) => void] {
+): [T, (patch: Partial<T> | ((current: T) => Partial<T>)) => void] {
   const router = useRouter()
   const searchParams = useSearchParams()
   const pathname = usePathname()
@@ -37,9 +37,10 @@ export function useCalculatorUrl<T extends Record<string, unknown>>(
     })
   ) as T
 
-  function setValues(patch: Partial<T>) {
+  // An updater receives the values including edits not yet in the URL, for changes built on the previous value
+  function setValues(patch: Partial<T> | ((current: T) => Partial<T>)) {
     const base = pending.current?.params === searchParams ? pending.current.values : values
-    const next = { ...base, ...patch }
+    const next = { ...base, ...(typeof patch === 'function' ? patch(base) : patch) }
     pending.current = { params: searchParams, values: next }
     const params = new URLSearchParams()
     let hasNonDefault = false
