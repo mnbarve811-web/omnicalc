@@ -342,6 +342,74 @@ test.describe('Financial calculators', () => {
       await expect(field(page, 'Loan Term (months)')).toHaveValue('0')
       await expect(cardValue(page, 'Monthly Payment')).toHaveText('$0')
     })
+
+    test('an extra monthly payment shows payoff time, interest saved and time saved', async ({ page }) => {
+      await page.goto('/financial/auto-loan?price=25000&down=0&tax=0')
+      await page.getByRole('button', { name: 'Advanced options' }).click()
+      await setField(page, 'Extra Monthly Payment', '100', 'extra')
+      const loan = { ...AUTO_DEFAULTS, vehiclePrice: 25000, downPayment: 0, salesTaxRate: 0 }
+      const expected = calculateAutoLoan({ ...loan, extraMonthlyPayment: 100 })
+      await expect(cardValue(page, 'Monthly Payment')).toHaveText(usd.format(calculateAutoLoan(loan).monthlyPayment))
+      await expect(cardValue(page, 'Payoff Time')).toHaveText('4 yr 1 mo')
+      await expect(cardValue(page, 'Time Saved')).toHaveText('11 mo')
+      await expect(cardValue(page, 'Interest Saved')).toHaveText(usd.format(expected.interestSaved))
+      await expect(cardValue(page, 'Total Interest')).toHaveText(usd.format(expected.totalInterestPaid))
+    })
+
+    test('a trade-in reduces the taxable price unless the option is turned off', async ({ page }) => {
+      await page.goto('/financial/auto-loan?trade=5000')
+      const taxed = calculateAutoLoan({ ...AUTO_DEFAULTS, tradeInValue: 5000 })
+      await expect(cardValue(page, 'Loan Amount')).toHaveText(usd.format(taxed.loanBalance))
+      await expect(cardValue(page, 'Cost Breakdown')).toContainText('Sales tax (8% of $25,000)')
+      await page.getByRole('button', { name: 'Advanced options' }).click()
+      await page.getByRole('checkbox', { name: 'Trade-in reduces taxable price' }).uncheck()
+      await expect(page).toHaveURL(/[?&]ttax=0(&|$)/)
+      const untaxed = calculateAutoLoan({ ...AUTO_DEFAULTS, tradeInValue: 5000, tradeInReducesTax: false })
+      await expect(cardValue(page, 'Loan Amount')).toHaveText(usd.format(untaxed.loanBalance))
+      await expect(cardValue(page, 'Cost Breakdown')).toContainText('Sales tax (8% of $30,000)')
+    })
+
+    test('URL params restore advanced options and fees paid upfront', async ({ page }) => {
+      await page.goto('/financial/auto-loan?trade=5000&extra=50&fees=600&ffin=0&ttax=0')
+      await expect(field(page, 'Extra Monthly Payment')).toHaveValue('50')
+      await expect(field(page, 'Fees')).toHaveValue('600')
+      await expect(page.getByRole('checkbox', { name: 'Finance fees in the loan' })).not.toBeChecked()
+      await expect(page.getByRole('checkbox', { name: 'Trade-in reduces taxable price' })).not.toBeChecked()
+      const expected = calculateAutoLoan({ ...AUTO_DEFAULTS, tradeInValue: 5000, extraMonthlyPayment: 50, fees: 600, feesFinanced: false, tradeInReducesTax: false })
+      await expect(cardValue(page, 'Loan Amount')).toHaveText(usd.format(expected.loanBalance))
+      await expect(cardValue(page, 'Total Cost')).toHaveText(usd.format(expected.totalCost))
+      await expect(cardValue(page, 'Cost Breakdown')).toContainText('Fees (paid upfront)')
+    })
+
+    test('financed fees are added to the loan amount', async ({ page }) => {
+      await page.goto('/financial/auto-loan')
+      await page.getByRole('button', { name: 'Advanced options' }).click()
+      await setField(page, 'Fees', '500', 'fees')
+      const expected = calculateAutoLoan({ ...AUTO_DEFAULTS, fees: 500 })
+      await expect(cardValue(page, 'Loan Amount')).toHaveText(usd.format(expected.loanBalance))
+      await expect(cardValue(page, 'Cost Breakdown')).toContainText('Fees (financed)')
+    })
+
+    test('negative amounts in the URL are treated as zero', async ({ page }) => {
+      await page.goto('/financial/auto-loan?down=-5000&extra=-100')
+      await expect(field(page, 'Down Payment')).toHaveValue('0')
+      const expected = calculateAutoLoan({ ...AUTO_DEFAULTS, downPayment: 0 })
+      await expect(cardValue(page, 'Loan Amount')).toHaveText(usd.format(expected.loanBalance))
+      await expect(cardValue(page, 'Monthly Payment')).toHaveText(usd.format(expected.monthlyPayment))
+    })
+
+    test('compares 36 to 84 month terms and marks the current term', async ({ page }) => {
+      await page.goto('/financial/auto-loan')
+      const table = cardValue(page, 'Compare Loan Terms')
+      for (const termMonths of [36, 48, 60, 72, 84]) {
+        const expected = calculateAutoLoan({ ...AUTO_DEFAULTS, loanTermMonths: termMonths })
+        const row = table.getByRole('row').filter({ hasText: `${termMonths} months` })
+        await expect(row).toContainText(usd.format(expected.monthlyPayment))
+        await expect(row).toContainText(usd.format(expected.totalInterestPaid))
+        await expect(row).toContainText(usd.format(expected.totalCost))
+      }
+      await expect(table.getByRole('row').filter({ hasText: '60 months' })).toHaveAttribute('aria-current', 'true')
+    })
   })
 
   test.describe('salary', () => {
