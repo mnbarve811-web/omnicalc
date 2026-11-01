@@ -247,10 +247,87 @@ test.describe('Financial calculators', () => {
 
     test('exports CSV and PDF, and disables export for a zero-year period', async ({ page }) => {
       await page.goto('/financial/compound-interest')
-      await expectCsvDownload(page, 'Year,Balance,Total Contributed,Interest Earned', 20)
+      await expectCsvDownload(page, "Year,Balance,Total Contributed,Interest Earned,Balance in Today's Dollars", 20)
       await expectPdfDownload(page)
       await setField(page, 'Time Period (years)', '0', 'years')
       await expectExportDisabled(page)
+    })
+
+    test('shows the default future value in today\'s dollars at 3% inflation', async ({ page }) => {
+      await page.goto('/financial/compound-interest')
+      const expected = calculateCompoundInterest(COMPOUND_DEFAULTS)
+      const todaysDollars = Math.round((expected.futureValue / Math.pow(1.03, 20)) * 100) / 100
+      await expect(cardValue(page, "In Today's Dollars")).toHaveText(usd.format(todaysDollars))
+    })
+
+    test('weekly contributions relabel the amount and update the future value and the URL', async ({ page }) => {
+      await page.goto('/financial/compound-interest')
+      await field(page, 'Contribution Frequency').selectOption('52')
+      await expect(page).toHaveURL(/[?&]cf=52(&|$)/)
+      await setField(page, 'Weekly Contribution', '100', 'monthly')
+      const expected = calculateCompoundInterest({ ...COMPOUND_DEFAULTS, monthlyContribution: 100, contributionFrequency: 52 })
+      await expect(cardValue(page, 'Future Value')).toHaveText(usd.format(expected.futureValue))
+      await expect(cardValue(page, 'Total Contributions')).toHaveText(usd.format(10000 + 100 * 52 * 20))
+    })
+
+    test('advanced options apply tax, inflation, step-ups and one-time contributions', async ({ page }) => {
+      await page.goto('/financial/compound-interest')
+      await page.getByRole('button', { name: 'Advanced options' }).click()
+      await setField(page, 'Annual Contribution Increase (%)', '3', 'inc')
+      await setField(page, 'Inflation Rate (%)', '2', 'infl')
+      await setField(page, 'Tax on Returns (%)', '15', 'tax')
+      await page.getByRole('button', { name: '+ Add Contribution' }).click()
+      await expect(page).toHaveURL(/[?&]extra=5~1000(&|$)/)
+      await field(page, 'Amount').fill('5000')
+      await expect(page).toHaveURL(/[?&]extra=5~5000(&|$)/)
+
+      const options = { ...COMPOUND_DEFAULTS, annualContributionIncrease: 3, additionalContributions: [{ year: 5, amount: 5000 }] }
+      const pretax = calculateCompoundInterest(options)
+      const afterTax = calculateCompoundInterest({ ...options, taxRate: 15 })
+      await expect(cardValue(page, 'Future Value')).toHaveText(usd.format(pretax.futureValue))
+      await expect(cardValue(page, 'After-Tax Value (approx.)')).toHaveText(usd.format(afterTax.futureValue))
+      const todaysDollars = Math.round((pretax.futureValue / Math.pow(1.02, 20)) * 100) / 100
+      await expect(cardValue(page, "In Today's Dollars")).toHaveText(usd.format(todaysDollars))
+
+      await page.getByRole('button', { name: 'Remove additional contribution 1' }).click()
+      await expect(page).not.toHaveURL(/extra=/)
+    })
+
+    test('URL params for the new options restore inputs and open the advanced options', async ({ page }) => {
+      await page.goto('/financial/compound-interest?cf=4&monthly=1500&inc=2&infl=2.5&tax=20&extra=3~5000_10~2000')
+      await expect(field(page, 'Contribution Frequency')).toHaveValue('4')
+      await expect(field(page, 'Quarterly Contribution')).toHaveValue('1500')
+      await expect(field(page, 'Annual Contribution Increase (%)')).toHaveValue('2')
+      await expect(field(page, 'Inflation Rate (%)')).toHaveValue('2.5')
+      await expect(field(page, 'Tax on Returns (%)')).toHaveValue('20')
+      await expect(page.locator('label').getByText('Year', { exact: true })).toHaveCount(2)
+      const options = {
+        ...COMPOUND_DEFAULTS,
+        monthlyContribution: 1500,
+        contributionFrequency: 4,
+        annualContributionIncrease: 2,
+        additionalContributions: [{ year: 3, amount: 5000 }, { year: 10, amount: 2000 }],
+      }
+      await expect(cardValue(page, 'Future Value')).toHaveText(usd.format(calculateCompoundInterest(options).futureValue))
+      await expect(cardValue(page, 'After-Tax Value (approx.)')).toHaveText(usd.format(calculateCompoundInterest({ ...options, taxRate: 20 }).futureValue))
+    })
+
+    test('invalid URL values fall back to safe inputs', async ({ page }) => {
+      await page.goto('/financial/compound-interest?cf=7&init=-500&years=5000&tax=250')
+      await expect(field(page, 'Contribution Frequency')).toHaveValue('12')
+      await expect(field(page, 'Initial Investment')).toHaveValue('0')
+      await expect(field(page, 'Time Period (years)')).toHaveValue('100')
+      await expect(field(page, 'Tax on Returns (%)')).toHaveValue('100')
+    })
+
+    test('compares future values at nearby interest rates', async ({ page }) => {
+      await page.goto('/financial/compound-interest')
+      const table = page.locator('[data-slot="card"]').filter({ hasText: 'Compare Interest Rates' })
+      for (const rate of [5, 6, 8, 9]) {
+        const expected = calculateCompoundInterest({ ...COMPOUND_DEFAULTS, annualInterestRate: rate })
+        await expect(table.getByRole('row', { name: new RegExp(`^${rate}%`) })).toContainText(usd.format(expected.futureValue))
+      }
+      await expect(table.getByRole('row', { name: /^7% \(current\)/ })).toContainText(usd.format(calculateCompoundInterest(COMPOUND_DEFAULTS).futureValue))
     })
   })
 
