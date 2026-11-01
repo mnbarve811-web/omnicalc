@@ -390,6 +390,71 @@ test.describe('Financial calculators', () => {
       await expect(cardValue(page, 'Net Pay (per period)')).toBeVisible()
       await expect(page.locator('#salary-results')).not.toContainText('NaN')
     })
+
+    test('hourly pay type uses rate x hours and shows the hourly rate', async ({ page }) => {
+      await page.goto('/financial/salary')
+      await page.getByRole('button', { name: 'Hourly', exact: true }).click()
+      await expect(page).toHaveURL(/[?&]type=hourly(&|$)/)
+      await setField(page, 'Hourly Rate', '30', 'rate')
+      await setField(page, 'Regular Hours per Week', '35', 'hours')
+      const expected = calculateSalary({ ...SALARY_DEFAULTS, payType: 'hourly', hourlyRate: 30, hoursPerWeek: 35 })
+      await expect(cardValue(page, 'Net Pay (per period)')).toHaveText(usd.format(expected.netPay))
+      await expect(cardValue(page, 'Annual Gross')).toHaveText(usd.format(30 * 35 * 52))
+      await expect(cardValue(page, 'Hourly Rate')).toHaveText('$30.00')
+    })
+
+    test('overtime from the URL opens its section and raises gross pay', async ({ page }) => {
+      await page.goto('/financial/salary?type=hourly&rate=20&ot=5&otx=2')
+      await expect(field(page, 'Overtime Hours per Week')).toHaveValue('5')
+      await expect(field(page, 'Overtime Multiplier')).toHaveValue('2')
+      const expected = calculateSalary({ ...SALARY_DEFAULTS, payType: 'hourly', hourlyRate: 20, overtimeHoursPerWeek: 5, overtimeMultiplier: 2 })
+      await expect(cardValue(page, 'Annual Gross')).toHaveText(usd.format(expected.annualGross))
+      await expect(cardValue(page, 'Net Pay (per period)')).toHaveText(usd.format(expected.netPay))
+    })
+
+    test('salaried mode explains that overtime does not apply', async ({ page }) => {
+      await page.goto('/financial/salary')
+      await page.getByRole('button', { name: 'Overtime', exact: true }).click()
+      await expect(page.getByText(/Salaried exempt employees don.t earn overtime/)).toBeVisible()
+      await expect(page.locator('label').getByText('Overtime Hours per Week', { exact: true })).toHaveCount(0)
+    })
+
+    test('bonus with the supplemental rate restores from the URL', async ({ page }) => {
+      await page.goto('/financial/salary?bonus=12000&supp=1')
+      await expect(field(page, 'Annual Bonus')).toHaveValue('12000')
+      await expect(page.getByLabel(/supplemental rate/)).toBeChecked()
+      const expected = calculateSalary({ ...SALARY_DEFAULTS, annualBonus: 12000, supplementalFlatRate: true })
+      await expect(cardValue(page, 'Net Pay (per period)')).toHaveText(usd.format(expected.netPay))
+      await expect(cardValue(page, 'Annual Gross')).toHaveText(usd.format(72000))
+    })
+
+    test('pre-tax retirement and health deductions update net pay and the URL', async ({ page }) => {
+      await page.goto('/financial/salary')
+      await page.getByRole('button', { name: 'Pre-tax Deductions', exact: true }).click()
+      await setField(page, '401(k) / 403(b) Contribution', '10', 'ret')
+      await setField(page, 'Health / HSA / FSA per Paycheck', '200', 'health')
+      const expected = calculateSalary({ ...SALARY_DEFAULTS, retirementContribution: 10, pretaxHealth: 200 })
+      await expect(cardValue(page, 'Net Pay (per period)')).toHaveText(usd.format(expected.netPay))
+      await page.getByRole('button', { name: '$ per paycheck', exact: true }).click()
+      await expect(page).toHaveURL(/[?&]retu=amount(&|$)/)
+      const asAmount = calculateSalary({ ...SALARY_DEFAULTS, retirementContribution: 10, retirementUnit: 'amount', pretaxHealth: 200 })
+      await expect(cardValue(page, 'Net Pay (per period)')).toHaveText(usd.format(asAmount.netPay))
+    })
+
+    test('high pay hits the Social Security wage base', async ({ page }) => {
+      await page.goto('/financial/salary?gross=20000')
+      const expected = calculateSalary({ ...SALARY_DEFAULTS, grossPay: 20000 })
+      expect(expected.isSocialSecurityCapped).toBe(true)
+      await expect(cardValue(page, 'Net Pay (per period)')).toHaveText(usd.format(expected.netPay))
+      await expect(page.getByText(/Social Security stops at the \$184,500 wage base/)).toBeVisible()
+    })
+
+    test('out-of-range URL values fall back to defaults', async ({ page }) => {
+      await page.goto('/financial/salary?gross=-100&hours=500')
+      await expect(field(page, 'Gross Pay per Period')).toHaveValue('5000')
+      await expect(field(page, 'Regular Hours per Week')).toHaveValue('40')
+      await expect(cardValue(page, 'Net Pay (per period)')).toHaveText(usd.format(calculateSalary(SALARY_DEFAULTS).netPay))
+    })
   })
 
   test.describe('debt payoff', () => {
