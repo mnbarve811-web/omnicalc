@@ -161,10 +161,10 @@ export function MortgageCalculator() {
             min={0}
             max={100}
             step={1}
-            value={downPercent}
+            value={[downPercent]}
             disabled={values.homePrice <= 0}
             onValueChange={(value) => {
-              // The shared Slider is typed for ranges too, but this one has a single thumb
+              // The shared Slider draws one thumb per array entry; a plain number would render [min, max]
               const percent = typeof value === 'number' ? value : value[0]
               setValues({ downPayment: Math.round((values.homePrice * percent) / 100) })
             }}
@@ -176,7 +176,8 @@ export function MortgageCalculator() {
         <Field label="Home Insurance (monthly)" prefix="$" type="number" value={values.homeInsurance} onChange={(e) => setValues({ homeInsurance: Number(e.target.value) })} />
         <Field label="HOA (monthly)" prefix="$" type="number" value={values.hoa} onChange={(e) => setValues({ hoa: Number(e.target.value) })} />
 
-        <Accordion defaultValue={hasExtras ? ['advanced'] : []}>
+        {/* Raw lump sums count too, so an invalid one from a link opens the panel and shows its error */}
+        <Accordion defaultValue={hasExtras || values.lumpSums.length > 0 ? ['advanced'] : []}>
           <AccordionItem value="advanced" className="border-t">
             <AccordionTrigger>Advanced options: extra payments</AccordionTrigger>
             <AccordionContent className="space-y-5 pt-2">
