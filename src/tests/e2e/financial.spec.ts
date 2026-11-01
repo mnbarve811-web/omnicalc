@@ -36,7 +36,7 @@ test.describe('Financial Pillar', () => {
   test('mortgage calculator renders and shows result', async ({ page }) => {
     await page.goto('/financial/mortgage')
     await expect(page.getByRole('heading', { name: 'Mortgage Calculator' })).toBeVisible()
-    await expect(page.getByText('Monthly P&I', { exact: true })).toBeVisible()
+    await expect(page.locator('[data-slot="card-title"]').getByText('Monthly P&I', { exact: true })).toBeVisible()
     await expect(page.getByRole('tab', { name: 'Yearly Summary' })).toBeVisible()
   })
 
@@ -49,7 +49,7 @@ test.describe('Financial Pillar', () => {
   test('compound interest calculator renders with chart', async ({ page }) => {
     await page.goto('/financial/compound-interest')
     await expect(page.getByRole('heading', { name: 'Compound Interest Calculator' })).toBeVisible()
-    await expect(page.getByText('Future Value', { exact: true })).toBeVisible()
+    await expect(page.locator('[data-slot="card-title"]').getByText('Future Value', { exact: true })).toBeVisible()
   })
 
   test('retirement calculator renders with chart', async ({ page }) => {
@@ -232,10 +232,10 @@ test.describe('Financial calculators', () => {
       await page.goto('/financial/mortgage')
       await page.getByRole('button', { name: 'Advanced options: extra payments' }).click()
       await page.getByRole('button', { name: '+ Add Lump Sum' }).click()
-      await expect(page).toHaveURL(/[?&]lump=12~5000(&|$)/)
+      await expect(page).toHaveURL(/[?&]lump=12%7E5000(&|$)/)
       const row = page.getByRole('group', { name: 'Lump sum 1' })
       await row.locator('input').nth(1).fill('20000')
-      await expect(page).toHaveURL(/[?&]lump=12~20000(&|$)/)
+      await expect(page).toHaveURL(/[?&]lump=12%7E20000(&|$)/)
       const expected = calculateMortgage({ ...MORTGAGE_DEFAULTS, lumpSums: [{ month: 12, amount: 20000 }] })
       await expect(cardValue(page, 'Total Interest')).toHaveText(usd.format(expected.totalInterestPaid))
       await page.getByRole('button', { name: 'Remove lump sum 1' }).click()
@@ -341,9 +341,9 @@ test.describe('Financial calculators', () => {
       await setField(page, 'Inflation Rate (%)', '2', 'infl')
       await setField(page, 'Tax on Returns (%)', '15', 'tax')
       await page.getByRole('button', { name: '+ Add Contribution' }).click()
-      await expect(page).toHaveURL(/[?&]extra=5~1000(&|$)/)
+      await expect(page).toHaveURL(/[?&]extra=5%7E1000(&|$)/)
       await field(page, 'Amount').fill('5000')
-      await expect(page).toHaveURL(/[?&]extra=5~5000(&|$)/)
+      await expect(page).toHaveURL(/[?&]extra=5%7E5000(&|$)/)
 
       const options = { ...COMPOUND_DEFAULTS, annualContributionIncrease: 3, additionalContributions: [{ year: 5, amount: 5000 }] }
       const pretax = calculateCompoundInterest(options)
@@ -548,8 +548,11 @@ test.describe('Financial calculators', () => {
       await expect(cardValue(page, 'Loan Amount')).toHaveText(usd.format(taxed.loanBalance))
       await expect(cardValue(page, 'Cost Breakdown')).toContainText('Sales tax (8% of $25,000)')
       await page.getByRole('button', { name: 'Advanced options' }).click()
-      await page.getByRole('checkbox', { name: 'Trade-in reduces taxable price' }).uncheck()
+      // click, not uncheck: the controlled box shows the URL value, so it only flips once the URL update lands
+      const taxToggle = page.getByRole('checkbox', { name: 'Trade-in reduces taxable price' })
+      await taxToggle.click()
       await expect(page).toHaveURL(/[?&]ttax=0(&|$)/)
+      await expect(taxToggle).not.toBeChecked()
       const untaxed = calculateAutoLoan({ ...AUTO_DEFAULTS, tradeInValue: 5000, tradeInReducesTax: false })
       await expect(cardValue(page, 'Loan Amount')).toHaveText(usd.format(untaxed.loanBalance))
       await expect(cardValue(page, 'Cost Breakdown')).toContainText('Sales tax (8% of $30,000)')
@@ -718,9 +721,9 @@ test.describe('Financial calculators', () => {
     const comparisonRow = (page: Page, scenario: string) => page.getByRole('row').filter({ hasText: scenario })
     const monthYear = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' })
 
-    // Names in these tests contain no '_' or '~', so plain encodeURIComponent matches the list encoding
+    // Names in these tests contain no '%', '_' or '~', so the list encoding leaves them as they are
     async function expectDebtsInUrl(page: Page, debts: DebtItem[]) {
-      const expected = debts.map(d => [d.name, d.balance, d.interestRate, d.minimumPayment].map(p => encodeURIComponent(String(p))).join('~')).join('_')
+      const expected = debts.map(d => [d.name, d.balance, d.interestRate, d.minimumPayment].map(String).join('~')).join('_')
       await expect.poll(() => new URL(page.url()).searchParams.get('debts')).toBe(expected)
     }
 
