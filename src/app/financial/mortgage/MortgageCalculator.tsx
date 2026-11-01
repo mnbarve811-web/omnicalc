@@ -1,7 +1,15 @@
 'use client'
 
-import { useCalculatorUrl, type Schema } from '@/lib/hooks/use-calculator-url'
-import { calculateMortgage, type MortgageInputs } from '@/lib/engine/financial'
+import { useId } from 'react'
+import { X } from 'lucide-react'
+import { listField, useCalculatorUrl, type Schema } from '@/lib/hooks/use-calculator-url'
+import {
+  calculateExtraPaymentSavings,
+  calculateMortgage,
+  compareMortgageTerms,
+  type LumpSum,
+  type MortgageInputs,
+} from '@/lib/engine/financial'
 import {
   AreaChart,
   Area,
@@ -22,6 +30,9 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
+import { Button } from '@/components/ui/button'
+import { Slider } from '@/components/ui/slider'
 import { Field } from '@/components/common/Field'
 import { CalculatorGrid, InputPanel, ResultPanel } from '@/components/common/CalculatorLayout'
 import { ProportionBar, ResultHero, ResultStat, ResultStats, type ProportionSegment } from '@/components/common/Result'
@@ -36,7 +47,12 @@ const SCHEMA = {
   propertyTax:   { param: 'tax',   default: 300,    parse: Number, serialize: String },
   homeInsurance: { param: 'ins',   default: 120,    parse: Number, serialize: String },
   hoa:           { param: 'hoa',   default: 0,      parse: Number, serialize: String },
-} as const satisfies Schema<MortgageInputs>
+  extraMonthlyPayment: { param: 'extra', default: 0, parse: Number, serialize: String },
+  lumpSums: listField<LumpSum>('lump', [], l => [l.month, l.amount], ([month, amount]) => ({ month: Number(month), amount: Number(amount) })),
+  biweekly: { param: 'bw', default: false, parse: (s: string) => s === '1', serialize: (b: boolean) => (b ? '1' : '0') },
+} as const satisfies Schema<MortgageForm>
+
+type MortgageForm = Required<MortgageInputs>
 
 const fmt = new Intl.NumberFormat('en-US', {
   style: 'currency',
@@ -48,6 +64,33 @@ function fmtCurrency(n: number): string {
   return fmt.format(n)
 }
 
+function formatPayoffTime(months: number): string {
+  const years = Math.floor(months / 12)
+  const remainder = months % 12
+  if (years === 0) return `${remainder} mo`
+  if (remainder === 0) return `${years} yr`
+  return `${years} yr ${remainder} mo`
+}
+
+function lumpSumMonthError(lump: LumpSum, termMonths: number): string | undefined {
+  if (Number.isInteger(lump.month) && lump.month >= 1 && lump.month <= termMonths) return undefined
+  return `Enter a whole month from 1 to ${termMonths}`
+}
+
+function lumpSumAmountError(lump: LumpSum): string | undefined {
+  return lump.amount < 0 ? 'Amount cannot be negative' : undefined
+}
+
+// URL and typed values are untrusted: invalid extras are dropped rather than passed to the engine
+function toEngineInputs(values: MortgageForm): MortgageInputs {
+  const termMonths = Math.max(0, values.loanTermYears * 12)
+  return {
+    ...values,
+    extraMonthlyPayment: Math.max(0, values.extraMonthlyPayment),
+    lumpSums: values.lumpSums.filter(l => !lumpSumMonthError(l, termMonths) && !lumpSumAmountError(l) && l.amount > 0),
+  }
+}
+
 interface YearlyRow {
   year: number
   principalPaid: number
@@ -56,10 +99,29 @@ interface YearlyRow {
 }
 
 export function MortgageCalculator() {
-  const [values, setValues] = useCalculatorUrl<MortgageInputs & Record<string, unknown>>(
-    SCHEMA as Schema<MortgageInputs & Record<string, unknown>>
+  const [values, setValues] = useCalculatorUrl<MortgageForm & Record<string, unknown>>(
+    SCHEMA as Schema<MortgageForm & Record<string, unknown>>
   )
-  const result = calculateMortgage(values)
+  const downPercentLabelId = useId()
+  const inputs = toEngineInputs(values)
+  const result = calculateMortgage(inputs)
+  const savings = calculateExtraPaymentSavings(inputs)
+  const termComparison = compareMortgageTerms(inputs)
+  const hasExtras = (inputs.extraMonthlyPayment ?? 0) > 0 || (inputs.lumpSums ?? []).length > 0 || values.biweekly
+  const termMonths = Math.max(0, values.loanTermYears * 12)
+  const downPercent = values.homePrice > 0 ? Math.min(100, Math.max(0, (values.downPayment / values.homePrice) * 100)) : 0
+
+  function updateLumpSum(index: number, patch: Partial<LumpSum>) {
+    setValues({ lumpSums: values.lumpSums.map((lump, i) => (i === index ? { ...lump, ...patch } : lump)) })
+  }
+
+  function addLumpSum() {
+    setValues({ lumpSums: [...values.lumpSums, { month: Math.min(12, Math.max(1, termMonths)), amount: 5000 }] })
+  }
+
+  function removeLumpSum(index: number) {
+    setValues({ lumpSums: values.lumpSums.filter((_, i) => i !== index) })
+  }
 
   const yearlyData: YearlyRow[] = []
   const schedule = result.amortizationSchedule
@@ -89,11 +151,107 @@ export function MortgageCalculator() {
       <InputPanel title="Loan Details">
         <Field label="Home Price" prefix="$" type="number" value={values.homePrice} onChange={(e) => setValues({ homePrice: Number(e.target.value) })} />
         <Field label="Down Payment" prefix="$" type="number" value={values.downPayment} onChange={(e) => setValues({ downPayment: Number(e.target.value) })} />
+        <div>
+          <div className="mb-2 flex items-baseline justify-between text-sm">
+            <span id={downPercentLabelId} className="font-medium text-foreground">Down Payment (%)</span>
+            <span className="tabular-nums text-muted-foreground">{downPercent.toFixed(1)}%</span>
+          </div>
+          <Slider
+            aria-labelledby={downPercentLabelId}
+            min={0}
+            max={100}
+            step={1}
+            value={downPercent}
+            disabled={values.homePrice <= 0}
+            onValueChange={(value) => {
+              // The shared Slider is typed for ranges too, but this one has a single thumb
+              const percent = typeof value === 'number' ? value : value[0]
+              setValues({ downPayment: Math.round((values.homePrice * percent) / 100) })
+            }}
+          />
+        </div>
         <Field label="Loan Term" suffix="years" type="number" value={values.loanTermYears} onChange={(e) => setValues({ loanTermYears: Number(e.target.value) })} />
         <Field label="Interest Rate" suffix="%" type="number" step="0.1" value={values.interestRate} onChange={(e) => setValues({ interestRate: Number(e.target.value) })} />
         <Field label="Property Tax (monthly)" prefix="$" type="number" value={values.propertyTax} onChange={(e) => setValues({ propertyTax: Number(e.target.value) })} />
         <Field label="Home Insurance (monthly)" prefix="$" type="number" value={values.homeInsurance} onChange={(e) => setValues({ homeInsurance: Number(e.target.value) })} />
         <Field label="HOA (monthly)" prefix="$" type="number" value={values.hoa} onChange={(e) => setValues({ hoa: Number(e.target.value) })} />
+
+        <Accordion defaultValue={hasExtras ? ['advanced'] : []}>
+          <AccordionItem value="advanced" className="border-t">
+            <AccordionTrigger>Advanced options: extra payments</AccordionTrigger>
+            <AccordionContent className="space-y-5 pt-2">
+              <Field
+                label="Extra Monthly Payment"
+                prefix="$"
+                type="number"
+                min={0}
+                hint="Added to principal every month"
+                error={values.extraMonthlyPayment < 0 ? 'Amount cannot be negative' : undefined}
+                value={values.extraMonthlyPayment}
+                onChange={(e) => setValues({ extraMonthlyPayment: Number(e.target.value) })}
+              />
+
+              <div className="space-y-3">
+                <p className="text-sm font-medium text-foreground">One-time Lump Sums</p>
+                {values.lumpSums.map((lump, i) => (
+                  <fieldset key={i} className="rounded-md border border-border p-3">
+                    <legend className="sr-only">{`Lump sum ${i + 1}`}</legend>
+                    <div className="flex items-start gap-2">
+                      <Field
+                        label="Month"
+                        type="number"
+                        min={1}
+                        max={termMonths}
+                        className="w-24 shrink-0"
+                        error={lumpSumMonthError(lump, termMonths)}
+                        value={lump.month}
+                        onChange={(e) => updateLumpSum(i, { month: Number(e.target.value) })}
+                      />
+                      <Field
+                        label="Amount"
+                        prefix="$"
+                        type="number"
+                        min={0}
+                        className="min-w-0 flex-1"
+                        error={lumpSumAmountError(lump)}
+                        value={lump.amount}
+                        onChange={(e) => updateLumpSum(i, { amount: Number(e.target.value) })}
+                      />
+                      <Button type="button" variant="ghost" size="icon" className="mt-6" aria-label={`Remove lump sum ${i + 1}`} onClick={() => removeLumpSum(i)}>
+                        <X aria-hidden />
+                      </Button>
+                    </div>
+                  </fieldset>
+                ))}
+                <Button type="button" variant="outline" size="sm" className="w-full" onClick={addLumpSum}>+ Add Lump Sum</Button>
+              </div>
+
+              <fieldset>
+                <legend className="mb-1.5 block text-sm font-medium text-foreground">Payment Frequency</legend>
+                <div className="flex gap-2">
+                  {[{ label: 'Monthly', biweekly: false }, { label: 'Biweekly', biweekly: true }].map((option) => (
+                    <button
+                      key={option.label}
+                      type="button"
+                      aria-pressed={values.biweekly === option.biweekly}
+                      onClick={() => setValues({ biweekly: option.biweekly })}
+                      className={`h-11 flex-1 rounded-sm border px-4 text-sm font-medium transition-colors md:h-10 ${
+                        values.biweekly === option.biweekly ? 'border-primary bg-primary text-primary-foreground' : 'border-input bg-card hover:bg-muted'
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-1.5 text-xs text-muted-foreground">
+                  {values.biweekly
+                    ? `Half the monthly P&I (${fmtCurrency(result.monthlyPrincipalAndInterest / 2)}) every two weeks: 26 payments a year, the same as 13 monthly payments.`
+                    : 'One principal and interest payment each month.'}
+                </p>
+              </fieldset>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
       </InputPanel>
 
       <ResultPanel id="mortgage-results">
@@ -105,6 +263,10 @@ export function MortgageCalculator() {
           <ResultStat label="Monthly P&I" value={fmtCurrency(result.monthlyPrincipalAndInterest)} />
           <ResultStat label="Total Interest" value={fmtCurrency(result.totalInterestPaid)} />
           <ResultStat label="Loan Amount" value={fmtCurrency(loanAmount)} />
+          <ResultStat label="Payoff Time" value={formatPayoffTime(savings.payoffMonths)} />
+          {values.biweekly && <ResultStat label="Biweekly P&I" value={fmtCurrency(result.monthlyPrincipalAndInterest / 2)} />}
+          {hasExtras && <ResultStat label="Interest Saved" value={fmtCurrency(savings.interestSaved)} />}
+          {hasExtras && <ResultStat label="Time Saved" value={formatPayoffTime(savings.monthsSaved)} />}
         </ResultStats>
 
         <ResultActions
@@ -113,6 +275,7 @@ export function MortgageCalculator() {
           csvRows={schedule.map((row) => ({
             Month: row.month,
             Payment: row.payment.toFixed(2),
+            Extra: row.extra.toFixed(2),
             Principal: row.principal.toFixed(2),
             Interest: row.interest.toFixed(2),
             Balance: row.balance.toFixed(2),
@@ -160,6 +323,43 @@ export function MortgageCalculator() {
           </CardContent>
         </Card>
 
+        <Card>
+          <CardHeader>
+            <CardTitle>Compare Loan Terms</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="mb-3 text-sm text-muted-foreground">
+              {hasExtras
+                ? 'Each term uses your price, down payment and rate, with the same extra payments, lump sums and payment frequency.'
+                : 'Each term uses your price, down payment and rate.'}
+            </p>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Term</TableHead>
+                  <TableHead>Monthly P&amp;I</TableHead>
+                  <TableHead>Total Interest</TableHead>
+                  <TableHead>Payoff Time</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {termComparison.map((row) => (
+                  <TableRow
+                    key={row.termYears}
+                    aria-current={row.termYears === values.loanTermYears ? 'true' : undefined}
+                    className={row.termYears === values.loanTermYears ? 'bg-muted/60 font-medium' : undefined}
+                  >
+                    <TableCell>{`${row.termYears} years`}</TableCell>
+                    <TableCell>{fmtCurrency(row.monthlyPrincipalAndInterest)}</TableCell>
+                    <TableCell>{fmtCurrency(row.totalInterestPaid)}</TableCell>
+                    <TableCell>{formatPayoffTime(row.payoffMonths)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
         {/* Amortization table */}
         <Tabs defaultValue="yearly">
           <TabsList>
@@ -197,11 +397,15 @@ export function MortgageCalculator() {
           <TabsContent value="monthly">
             <Card>
               <CardContent className="pt-4">
+                {values.biweekly && (
+                  <p className="mb-3 text-sm text-muted-foreground">Biweekly: each month adds up the two or three payments made in it.</p>
+                )}
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Month</TableHead>
                       <TableHead>Payment</TableHead>
+                      <TableHead>Extra</TableHead>
                       <TableHead>Principal</TableHead>
                       <TableHead>Interest</TableHead>
                       <TableHead>Balance</TableHead>
@@ -212,6 +416,7 @@ export function MortgageCalculator() {
                       <TableRow key={row.month}>
                         <TableCell>{row.month}</TableCell>
                         <TableCell>{fmtCurrency(row.payment)}</TableCell>
+                        <TableCell>{fmtCurrency(row.extra)}</TableCell>
                         <TableCell>{fmtCurrency(row.principal)}</TableCell>
                         <TableCell>{fmtCurrency(row.interest)}</TableCell>
                         <TableCell>{fmtCurrency(row.balance)}</TableCell>
