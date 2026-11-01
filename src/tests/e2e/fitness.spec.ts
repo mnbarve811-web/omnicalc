@@ -251,7 +251,7 @@ test.describe('Body fat calculator', () => {
   test('renders with default result, guide, FAQ, canonical and JSON-LD', async ({ page }) => {
     await page.goto('/fitness/body-fat')
     await expectPageChrome(page, { path: '/fitness/body-fat', h1: 'Body Fat Calculator', guideText: bodyFatContent.guideText, firstQuestion: bodyFatContent.faqItems[0].question })
-    const expected = calculateBodyFat({ gender: 'male', heightCm: 177, neckCm: 38, waistCm: 85, hipCm: 95 })
+    const expected = calculateBodyFat({ gender: 'male', heightCm: 177, neckCm: 38, waistCm: 85, hipCm: 95, weightKg: 80 })
     await expect(bfValue(page)).toHaveText(`${expected.bodyFatPercentage.toFixed(1)}%`)
     await expect(bfCategory(page)).toHaveText(expected.category)
     await expect(inputByLabel(page, 'Hip (cm)')).toHaveCount(0)
@@ -263,7 +263,7 @@ test.describe('Body fat calculator', () => {
     await expect(inputByLabel(page, 'Hip (cm)')).toBeVisible()
     await inputByLabel(page, 'Waist (cm)').fill('75')
     await inputByLabel(page, 'Hip (cm)').fill('100')
-    const expected = calculateBodyFat({ gender: 'female', heightCm: 177, neckCm: 38, waistCm: 75, hipCm: 100 })
+    const expected = calculateBodyFat({ gender: 'female', heightCm: 177, neckCm: 38, waistCm: 75, hipCm: 100, weightKg: 80 })
     await expect(bfValue(page)).toHaveText(`${expected.bodyFatPercentage.toFixed(1)}%`)
     await expect(bfCategory(page)).toHaveText(expected.category)
     await expect(page.getByText('Body Fat Categories (Female)', { exact: true })).toBeVisible()
@@ -279,22 +279,32 @@ test.describe('Body fat calculator', () => {
     await page.goto('/fitness/body-fat?gender=female&height=165&neck=32&waist=70&hip=96')
     await expect(inputByLabel(page, 'Height (cm)')).toHaveValue('165')
     await expect(inputByLabel(page, 'Hip (cm)')).toHaveValue('96')
-    const expected = calculateBodyFat({ gender: 'female', heightCm: 165, neckCm: 32, waistCm: 70, hipCm: 96 })
+    const expected = calculateBodyFat({ gender: 'female', heightCm: 165, neckCm: 32, waistCm: 70, hipCm: 96, weightKg: 80 })
     await expect(bfValue(page)).toHaveText(`${expected.bodyFatPercentage.toFixed(1)}%`)
     await expect(bfCategory(page)).toHaveText(expected.category)
+  })
+
+  test('shows fat and lean mass from the entered weight', async ({ page }) => {
+    await page.goto('/fitness/body-fat')
+    await inputByLabel(page, 'Weight (kg)').fill('90')
+    await expect.poll(() => query(page).get('weight')).toBe('90')
+    const expected = calculateBodyFat({ gender: 'male', heightCm: 177, neckCm: 38, waistCm: 85, hipCm: 95, weightKg: 90 })
+    const stat = (label: string) => page.locator('#body-fat-results dt', { hasText: label }).locator('xpath=following-sibling::dd')
+    await expect(stat('Fat Mass')).toHaveText(`${expected.fatMassKg.toFixed(1)} kg`)
+    await expect(stat('Lean Mass')).toHaveText(`${expected.leanMassKg.toFixed(1)} kg`)
   })
 
   test('invalid params fall back to the defaults', async ({ page }) => {
     await page.goto('/fitness/body-fat?gender=other&waist=wide')
     await expect(page.getByText('Body Fat Categories (Male)', { exact: true })).toBeVisible()
     await expect(inputByLabel(page, 'Waist (cm)')).toHaveValue('85')
-    const expected = calculateBodyFat({ gender: 'male', heightCm: 177, neckCm: 38, waistCm: 85, hipCm: 95 })
+    const expected = calculateBodyFat({ gender: 'male', heightCm: 177, neckCm: 38, waistCm: 85, hipCm: 95, weightKg: 80 })
     await expect(bfValue(page)).toHaveText(`${expected.bodyFatPercentage.toFixed(1)}%`)
   })
 
   test('exports CSV and PDF', async ({ page }) => {
     await page.goto('/fitness/body-fat?waist=95')
-    const expected = calculateBodyFat({ gender: 'male', heightCm: 177, neckCm: 38, waistCm: 95, hipCm: 95 })
+    const expected = calculateBodyFat({ gender: 'male', heightCm: 177, neckCm: 38, waistCm: 95, hipCm: 95, weightKg: 80 })
     const csv = await expectCsvDownload(page, 'body-fat-percentage.csv', 'Category,Range (Male),Your Body Fat %', 5)
     expect(csv).toContain(`${expected.category},`)
     expect(csv).toContain(`,${expected.bodyFatPercentage.toFixed(1)}`)

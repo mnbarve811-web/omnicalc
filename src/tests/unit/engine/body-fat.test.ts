@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { calculateBodyFat } from '@/lib/engine'
 
-const MALE = { gender: 'male' as const, heightCm: 177, neckCm: 38, waistCm: 85, hipCm: 0 }
-const FEMALE = { gender: 'female' as const, heightCm: 165, neckCm: 32, waistCm: 70, hipCm: 95 }
+const MALE = { gender: 'male' as const, heightCm: 177, neckCm: 38, waistCm: 85, hipCm: 0, weightKg: 80 }
+const FEMALE = { gender: 'female' as const, heightCm: 165, neckCm: 32, waistCm: 70, hipCm: 95, weightKg: 62 }
 
 describe('calculateBodyFat', () => {
   it('male body fat percentage is between 1 and 60', () => {
@@ -40,8 +40,16 @@ describe('calculateBodyFat', () => {
     expect(Number.isFinite(r.bodyFatPercentage)).toBe(true)
     expect(r.bodyFatPercentage).toBeGreaterThanOrEqual(0)
   })
-  it('fat and lean mass are 0 since body weight is not an input', () => {
+  it('fat mass is weight times the displayed percentage, lean mass is the rest', () => {
     const r = calculateBodyFat(MALE)
+    expect(r.fatMassKg).toBeCloseTo(80 * r.bodyFatPercentage / 100, 10)
+    expect(r.leanMassKg).toBeCloseTo(80 - r.fatMassKg, 10)
+  })
+  it('weight does not change the percentage', () => {
+    expect(calculateBodyFat({ ...MALE, weightKg: 120 }).bodyFatPercentage).toBe(calculateBodyFat(MALE).bodyFatPercentage)
+  })
+  it('zero weight gives zero fat and lean mass', () => {
+    const r = calculateBodyFat({ ...MALE, weightKg: 0 })
     expect(r.fatMassKg).toBe(0)
     expect(r.leanMassKg).toBe(0)
   })
@@ -75,7 +83,7 @@ describe('calculateBodyFat', () => {
     expect(calculateBodyFat({ ...FEMALE, hipCm: 90, waistCm }).category).toBe(category)
   })
   it('same tape measurements give a different result for female than male', () => {
-    const tape = { heightCm: 170, neckCm: 35, waistCm: 80, hipCm: 95 }
+    const tape = { heightCm: 170, neckCm: 35, waistCm: 80, hipCm: 95, weightKg: 70 }
     expect(calculateBodyFat({ ...tape, gender: 'female' }).bodyFatPercentage)
       .not.toBe(calculateBodyFat({ ...tape, gender: 'male' }).bodyFatPercentage)
   })

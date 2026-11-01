@@ -4,7 +4,7 @@ export const guideText = `Body fat percentage is the share of your total body we
 
 Some body fat is essential. It stores energy, cushions organs, insulates the body and is involved in producing hormones. Women naturally carry more essential fat than men, partly because of its role in reproductive health, so healthy ranges differ by sex.
 
-This calculator uses the US Navy circumference method, a tape-measure technique developed by the US Navy to estimate body fat in large groups of service members without lab equipment. It uses your height and a few body circumferences, and it does not need your weight.
+This calculator uses the US Navy circumference method, a tape-measure technique developed by the US Navy to estimate body fat in large groups of service members without lab equipment. The percentage comes from your height and a few body circumferences alone; your weight is only used to split the result into fat mass and lean mass.
 
 How to use this calculator: choose Male or Female, then enter your height, neck and waist measurements in centimeters. If you choose Female, a hip field also appears, because the female formula uses hip circumference as well. The page starts with example values of a male, 177 cm tall, with a 38 cm neck and an 85 cm waist. Your result updates as you type and is shown to one decimal place, together with a category badge and a table of the category ranges for your sex. Your inputs are also saved in the page address, so you can bookmark them and compare later.
 
@@ -16,7 +16,7 @@ A worked example using the default values: for a man who is 177 cm tall with a 3
 
 The categories follow a widely used chart from the American Council on Exercise. For men: Essential is below 6 percent, Athletes 6 to 13 percent, Fitness 14 to 17 percent, Acceptable 18 to 24 percent, and Obese 25 percent or more. For women: Essential is below 14 percent, Athletes 14 to 20 percent, Fitness 21 to 24 percent, Acceptable 25 to 31 percent, and Obese 32 percent or more.
 
-How to interpret your result: the Fitness and Acceptable ranges cover most healthy, active adults. The Athletes range is typical of people who train seriously, and it is not a target everyone needs to reach. Staying near the essential level for long periods can affect hormones, energy and recovery, especially in women. If you want to know your approximate fat mass in kilograms, multiply your body weight by the percentage; for example, an 80 kg person at 16.6 percent carries about 13.3 kg of fat. The calculator itself does not ask for weight, so this step is done by hand.
+How to interpret your result: the Fitness and Acceptable ranges cover most healthy, active adults. The Athletes range is typical of people who train seriously, and it is not a target everyone needs to reach. Staying near the essential level for long periods can affect hormones, energy and recovery, especially in women. Fat mass is your body weight multiplied by the percentage; for example, an 80 kg person at 16.6 percent carries about 13.3 kg of fat, and the remaining 66.7 kg is lean mass. The calculator shows both figures from the weight you enter.
 
 Practical tips: measure under the same conditions each time, ideally in the morning before eating or exercising, because bloating and fluid shifts change waist size. Use the same tape and the same landmarks, and if possible have someone else help you. Re-measure every two to four weeks rather than daily, and focus on the trend across several readings. A falling waist measurement with a stable neck is usually a good sign of fat loss.
 

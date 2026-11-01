@@ -78,6 +78,7 @@ export interface BodyFatInputs {
   neckCm: number
   waistCm: number
   hipCm: number   // used for female only; ignored for male
+  weightKg: number   // only splits the result into fat and lean mass; the percentage does not use it
 }
 
 export interface BodyFatResult {
@@ -88,7 +89,7 @@ export interface BodyFatResult {
 }
 
 export function calculateBodyFat(inputs: BodyFatInputs): BodyFatResult {
-  const { gender, heightCm, neckCm, waistCm, hipCm } = inputs
+  const { gender, heightCm, neckCm, waistCm, hipCm, weightKg } = inputs
 
   let bf: number
   if (gender === 'male') {
@@ -120,7 +121,11 @@ export function calculateBodyFat(inputs: BodyFatInputs): BodyFatResult {
     else                 category = 'Obese'
   }
 
-  return { bodyFatPercentage, fatMassKg: 0, leanMassKg: 0, category }
+  // Uses the displayed percentage so fat mass matches what a reader gets multiplying by hand
+  const fatMassKg = Math.max(0, weightKg) * bodyFatPercentage / 100
+  const leanMassKg = Math.max(0, weightKg) - fatMassKg
+
+  return { bodyFatPercentage, fatMassKg, leanMassKg, category }
 }
 
 // --- Macro ---

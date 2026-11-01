@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Field } from '@/components/common/Field'
 import { CalculatorGrid, InputPanel, ResultPanel } from '@/components/common/CalculatorLayout'
-import { ResultHero } from '@/components/common/Result'
+import { ResultHero, ResultStat, ResultStats } from '@/components/common/Result'
 import { ResultActions } from '@/components/common/ResultActions'
 import { MobileResultBar } from '@/components/common/MobileResultBar'
 
@@ -16,6 +16,7 @@ const SCHEMA = {
   neckCm:   { param: 'neck',   default: 38,  parse: Number, serialize: String },
   waistCm:  { param: 'waist',  default: 85,  parse: Number, serialize: String },
   hipCm:    { param: 'hip',    default: 95,  parse: Number, serialize: String },
+  weightKg: { param: 'weight', default: 80,  parse: Number, serialize: String },
 } as const satisfies Schema<BodyFatInputs>
 
 // min/max mirror the engine's category thresholds; the last band's max only sets where the scale ends
@@ -95,6 +96,7 @@ export function BodyFatCalculator() {
         </div>
 
         <Field label="Height (cm)" type="number" value={values.heightCm} onChange={e => setValues({ heightCm: Number(e.target.value) })} />
+        <Field label="Weight (kg)" type="number" value={values.weightKg} onChange={e => setValues({ weightKg: Number(e.target.value) })} />
         <Field label="Neck (cm)" type="number" value={values.neckCm} onChange={e => setValues({ neckCm: Number(e.target.value) })} />
         <Field label="Waist (cm)" type="number" value={values.waistCm} onChange={e => setValues({ waistCm: Number(e.target.value) })} />
         {values.gender === 'female' && (
@@ -143,6 +145,11 @@ export function BodyFatCalculator() {
             </div>
           </figure>
         </ResultHero>
+
+        <ResultStats>
+          <ResultStat label="Fat Mass" value={`${result.fatMassKg.toFixed(1)} kg`} />
+          <ResultStat label="Lean Mass" value={`${result.leanMassKg.toFixed(1)} kg`} />
+        </ResultStats>
 
         <ResultActions
           resultsId="body-fat-results"
