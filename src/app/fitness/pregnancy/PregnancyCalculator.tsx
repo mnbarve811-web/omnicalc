@@ -7,6 +7,8 @@ import { CalculatorGrid, InputPanel, ResultPanel } from '@/components/common/Cal
 import { ResultHero, ResultStat, ResultStats } from '@/components/common/Result'
 import { ResultActions } from '@/components/common/ResultActions'
 import { MobileResultBar } from '@/components/common/MobileResultBar'
+import { ResultPlaceholder } from '@/components/common/ResultPlaceholder'
+import { useIsHydrated } from '@/lib/hooks/use-is-hydrated'
 
 function tenWeeksAgo(): string {
   const now = new Date()
@@ -42,6 +44,7 @@ export function PregnancyCalculator() {
     SCHEMA as Schema<PregnancyInputs & Record<string, unknown>>
   )
 
+  const isHydrated = useIsHydrated()
   const result = calculatePregnancy(values)
   const { dueDate, currentWeek, trimester } = result
 
@@ -51,6 +54,8 @@ export function PregnancyCalculator() {
   const lmp = values.lastMenstrualPeriod
   const canExport = /^\d{4}-\d{2}-\d{2}$/.test(lmp) && !isNaN(Date.parse(lmp))
 
+  // The default LMP and the current week both come from "today", so they render only once the visitor's clock is
+  // known; the read-only input also stops typing that React would discard while hydrating
   return (
     <CalculatorGrid>
       <InputPanel title="Last Menstrual Period">
@@ -58,66 +63,73 @@ export function PregnancyCalculator() {
           id="lmp-input"
           label="Date of LMP"
           type="date"
-          value={values.lastMenstrualPeriod}
+          readOnly={!isHydrated}
+          value={isHydrated ? values.lastMenstrualPeriod : ''}
           onChange={(e) => setValues({ lastMenstrualPeriod: e.target.value })}
           hint="Calculated using Naegele's Rule: LMP + 280 days."
         />
       </InputPanel>
 
       <ResultPanel id="pregnancy-results">
-        <ResultHero label="Due Date" value={formatDate(dueDate)} caption="Estimated from the first day of your last period">
-          <figure aria-label={`Pregnancy progress: week ${currentWeek} of 40`} className="relative pt-3">
-            <div aria-hidden className="flex h-3 gap-0.5 overflow-hidden rounded-full">
-              {TRIMESTER_RANGES.map((t, i) => (
-                <div key={t.label} className={`${TRIMESTER_COLORS[i]} h-full`} style={{ width: t.width }} />
-              ))}
-            </div>
-            <div
-              aria-hidden
-              className="absolute top-0 -translate-x-1/2 transition-[left] duration-300 ease-out motion-reduce:transition-none"
-              style={{ left: `${markerPct}%` }}
-            >
-              <div className="h-0 w-0 border-l-[6px] border-r-[6px] border-t-[8px] border-l-transparent border-r-transparent border-t-foreground" />
-            </div>
-            <div aria-hidden className="relative mt-2 h-4 text-xs font-semibold tabular-nums text-foreground">
-              <div
-                className={`absolute ${markerPct < 8 ? '' : markerPct > 92 ? '-translate-x-full' : '-translate-x-1/2'}`}
-                style={{ left: `${markerPct}%` }}
-              >
-                Wk {currentWeek}
-              </div>
-            </div>
-            <ul className="mt-4 flex flex-wrap gap-x-5 gap-y-1.5 text-sm">
-              {TRIMESTER_RANGES.map((t, i) => (
-                <li key={t.label} className="flex items-center gap-2">
-                  <div aria-hidden className={`h-2.5 w-2.5 shrink-0 rounded-[3px] ${TRIMESTER_COLORS[i]}`} />
-                  <div className="text-foreground">{t.label}</div>
-                  <div className="text-muted-foreground">({t.weeks})</div>
-                </li>
-              ))}
-            </ul>
-          </figure>
-        </ResultHero>
-
-        <ResultStats>
-          <ResultStat label="Current Week" value={`Week ${currentWeek} of 40`} />
-          <ResultStat label="Trimester" value={TRIMESTER_LABELS[trimester - 1]} />
-        </ResultStats>
-
-        <ResultActions
-          resultsId="pregnancy-results"
-          filename="pregnancy-due-date"
-          csvRows={[
-            { Milestone: 'Last Menstrual Period', Value: formatDate(lmp) },
-            { Milestone: 'Estimated Due Date',    Value: formatDate(dueDate) },
-            { Milestone: 'Current Week',          Value: `Week ${currentWeek} of 40` },
-            { Milestone: 'Current Trimester',     Value: TRIMESTER_LABELS[trimester - 1] },
-          ]}
-          canExport={canExport}
-        />
+        {!isHydrated ? (
+          <ResultPlaceholder />
+        ) : (
+          <>
+            <ResultHero label="Due Date" value={formatDate(dueDate)} caption="Estimated from the first day of your last period">
+              <figure aria-label={`Pregnancy progress: week ${currentWeek} of 40`} className="relative pt-3">
+                <div aria-hidden className="flex h-3 gap-0.5 overflow-hidden rounded-full">
+                  {TRIMESTER_RANGES.map((t, i) => (
+                    <div key={t.label} className={`${TRIMESTER_COLORS[i]} h-full`} style={{ width: t.width }} />
+                  ))}
+                </div>
+                <div
+                  aria-hidden
+                  className="absolute top-0 -translate-x-1/2 transition-[left] duration-300 ease-out motion-reduce:transition-none"
+                  style={{ left: `${markerPct}%` }}
+                >
+                  <div className="h-0 w-0 border-l-[6px] border-r-[6px] border-t-[8px] border-l-transparent border-r-transparent border-t-foreground" />
+                </div>
+                <div aria-hidden className="relative mt-2 h-4 text-xs font-semibold tabular-nums text-foreground">
+                  <div
+                    className={`absolute ${markerPct < 8 ? '' : markerPct > 92 ? '-translate-x-full' : '-translate-x-1/2'}`}
+                    style={{ left: `${markerPct}%` }}
+                  >
+                    Wk {currentWeek}
+                  </div>
+                </div>
+                <ul className="mt-4 flex flex-wrap gap-x-5 gap-y-1.5 text-sm">
+                  {TRIMESTER_RANGES.map((t, i) => (
+                    <li key={t.label} className="flex items-center gap-2">
+                      <div aria-hidden className={`h-2.5 w-2.5 shrink-0 rounded-[3px] ${TRIMESTER_COLORS[i]}`} />
+                      <div className="text-foreground">{t.label}</div>
+                      <div className="text-muted-foreground">({t.weeks})</div>
+                    </li>
+                  ))}
+                </ul>
+              </figure>
+            </ResultHero>
+    
+            <ResultStats>
+              <ResultStat label="Current Week" value={`Week ${currentWeek} of 40`} />
+              <ResultStat label="Trimester" value={TRIMESTER_LABELS[trimester - 1]} />
+            </ResultStats>
+    
+            <ResultActions
+              resultsId="pregnancy-results"
+              filename="pregnancy-due-date"
+              csvRows={[
+                { Milestone: 'Last Menstrual Period', Value: formatDate(lmp) },
+                { Milestone: 'Estimated Due Date',    Value: formatDate(dueDate) },
+                { Milestone: 'Current Week',          Value: `Week ${currentWeek} of 40` },
+                { Milestone: 'Current Trimester',     Value: TRIMESTER_LABELS[trimester - 1] },
+              ]}
+              canExport={canExport}
+            />
+          </>
+        )}
       </ResultPanel>
 
-      <MobileResultBar targetId="pregnancy-results" value={formatDate(dueDate)} caption="estimated" />
+      {isHydrated && <MobileResultBar targetId="pregnancy-results" value={formatDate(dueDate)} caption="estimated" />}
     </CalculatorGrid>
   )
 }
