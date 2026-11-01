@@ -2,6 +2,7 @@
 
 import { useCalculatorUrl, type Schema } from '@/lib/hooks/use-calculator-url'
 import { calculateMortgage, type MortgageInputs } from '@/lib/engine/financial'
+import { formatCompactUsd } from '@/lib/format'
 import {
   AreaChart,
   Area,
@@ -130,7 +131,7 @@ export function MortgageCalculator() {
               <AreaChart data={yearlyData} margin={{ top: 4, right: 16, left: 16, bottom: 4 }}>
                 <CartesianGrid stroke="var(--border)" vertical={false} />
                 <XAxis dataKey="year" tickFormatter={(v: number) => `Yr ${v}`} tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }} tickLine={false} axisLine={false} />
-                <YAxis tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`} tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }} tickLine={false} axisLine={false} />
+                <YAxis tickFormatter={formatCompactUsd} tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }} tickLine={false} axisLine={false} />
                 <Tooltip
                   formatter={(value: number) => fmtCurrency(value)}
                   labelFormatter={(label: number) => `Year ${label}`}

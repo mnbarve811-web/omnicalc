@@ -2,6 +2,7 @@
 
 import { useCalculatorUrl, type Schema } from '@/lib/hooks/use-calculator-url'
 import { calculateCompoundInterest, type CompoundInterestInputs } from '@/lib/engine/financial'
+import { formatCompactUsd } from '@/lib/format'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -95,7 +96,7 @@ export function CompoundInterestCalculator() {
               <AreaChart data={chartData} margin={{ top: 4, right: 16, left: 16, bottom: 4 }}>
                 <CartesianGrid stroke="var(--border)" vertical={false} />
                 <XAxis dataKey="year" tickFormatter={(v: number) => `Yr ${v}`} tick={AXIS_TICK} tickLine={false} axisLine={false} />
-                <YAxis tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} tick={AXIS_TICK} tickLine={false} axisLine={false} />
+                <YAxis tickFormatter={formatCompactUsd} tick={AXIS_TICK} tickLine={false} axisLine={false} />
                 <Tooltip
                   formatter={(v) => typeof v === 'number' ? fmt(v) : String(v)}
                   labelFormatter={(label: number) => `Year ${label}`}

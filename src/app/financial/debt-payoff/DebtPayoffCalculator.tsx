@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { X } from 'lucide-react'
 import { useCalculatorUrl, type Schema } from '@/lib/hooks/use-calculator-url'
 import { calculateDebtPayoff, type DebtItem, type DebtPayoffStrategy } from '@/lib/engine/financial'
+import { formatCompactUsd } from '@/lib/format'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -152,10 +153,10 @@ export function DebtPayoffCalculator() {
               <BarChart data={comparisonData} margin={{ top: 4, right: 0, left: 0, bottom: 4 }}>
                 <CartesianGrid stroke="var(--border)" vertical={false} />
                 <XAxis dataKey="name" tick={AXIS_TICK} tickLine={false} axisLine={false} />
-                <YAxis yAxisId="left" tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} tick={AXIS_TICK} tickLine={false} axisLine={false} />
+                <YAxis yAxisId="left" tickFormatter={formatCompactUsd} tick={AXIS_TICK} tickLine={false} axisLine={false} />
                 <YAxis yAxisId="right" orientation="right" tick={AXIS_TICK} tickLine={false} axisLine={false} />
                 <Tooltip
-                  formatter={(v: number, name: string) => name === 'interest' ? fmt(v) : `${v} months`}
+                  formatter={(v: number, name: string) => name === 'Total Interest' ? fmt(v) : `${v} months`}
                   cursor={{ fill: 'var(--muted)' }}
                   contentStyle={{ borderRadius: 8, border: '1px solid var(--border)', fontSize: 13 }}
                 />
