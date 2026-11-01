@@ -5,12 +5,12 @@ import { X } from 'lucide-react'
 import { useCalculatorUrl, type Schema } from '@/lib/hooks/use-calculator-url'
 import { calculateDebtPayoff, type DebtItem, type DebtPayoffStrategy } from '@/lib/engine/financial'
 import { formatCompactUsd } from '@/lib/format'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Field } from '@/components/common/Field'
 import { CalculatorGrid, InputPanel, ResultPanel } from '@/components/common/CalculatorLayout'
-import { ResultHero, ResultStat, ResultStats } from '@/components/common/Result'
+import { ChartLegend, ResultHero, ResultStat, ResultStats } from '@/components/common/Result'
 import { ResultActions } from '@/components/common/ResultActions'
 import { MobileResultBar } from '@/components/common/MobileResultBar'
 
@@ -135,7 +135,7 @@ export function DebtPayoffCalculator() {
         <ResultHero label="Months to Debt-Free" value={monthsToDebtFree} caption={`Using the ${strategyName} strategy`} />
 
         <ResultStats>
-          <ResultStat label="Total Interest Paid" value={fmt(selected.totalInterestPaid)} />
+          <ResultStat label="Total Interest Paid" value={fmt(selected.totalInterestPaid)} swatchClass="bg-chart-2" />
           <ResultStat label="Payoff Order" value={selected.payoffOrder.join(' -> ')} />
         </ResultStats>
 
@@ -160,11 +160,11 @@ export function DebtPayoffCalculator() {
                   cursor={{ fill: 'var(--muted)' }}
                   contentStyle={{ borderRadius: 8, border: '1px solid var(--border)', fontSize: 13 }}
                 />
-                <Legend wrapperStyle={{ fontSize: 13 }} />
                 <Bar yAxisId="left" dataKey="interest" name="Total Interest" fill="var(--chart-2)" radius={[4, 4, 0, 0]} />
                 <Bar yAxisId="right" dataKey="months" name="Months" fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
+            <ChartLegend items={[{ label: 'Total Interest', colorClass: 'bg-chart-2' }, { label: 'Months', colorClass: 'bg-chart-1' }]} />
           </CardContent>
         </Card>
       </ResultPanel>

@@ -23,7 +23,7 @@ STORY: The visitor sees what OmniCalc covers, searches or picks a category, and 
 
 FIRST VIEWPORT: Left column: h1 "OmniCalc" at ~56-72px with one plain sentence of what it is, then a large search field (primary action) and a row of popular calculator links. Right column: the worked compound-interest example panel computed by the real engine, bars in cobalt/slate, linking to the calculator with those inputs in the URL.
 
-FORM: Pinned by the user (approved design system, 2026-10-31). seed: none (unavailable)
+FORM: Pinned by the user (approved design system, 2026-10-31); the concept roll was skipped because the direction is user-pinned. seed: none
 
 SIGNATURE MOVE: The worked example's yearly bars grow once on load (the page's single authored motion moment); everything else is static.
 

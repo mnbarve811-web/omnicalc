@@ -2,13 +2,13 @@
 
 import { useCalculatorUrl, type Schema } from '@/lib/hooks/use-calculator-url'
 import { calculateCompoundInterest, type CompoundInterestInputs } from '@/lib/engine/financial'
-import { formatCompactUsd } from '@/lib/format'
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { formatCompactUsd, niceTicks } from '@/lib/format'
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Field } from '@/components/common/Field'
 import { CalculatorGrid, InputPanel, ResultPanel } from '@/components/common/CalculatorLayout'
-import { ProportionBar, ResultHero, ResultStat, ResultStats, type ProportionSegment } from '@/components/common/Result'
+import { ChartLegend, ProportionBar, ResultHero, ResultStat, ResultStats, type ProportionSegment } from '@/components/common/Result'
 import { ResultActions } from '@/components/common/ResultActions'
 import { MobileResultBar } from '@/components/common/MobileResultBar'
 
@@ -34,6 +34,7 @@ export function CompoundInterestCalculator() {
     Contributions: d.contributions,
     Interest: Math.max(0, d.balance - d.contributions),
   }))
+  const yTicks = niceTicks(Math.max(0, ...chartData.map((d) => d.Contributions + d.Interest)))
 
   const canExport =
     inputs.years > 0 &&
@@ -96,17 +97,17 @@ export function CompoundInterestCalculator() {
               <AreaChart data={chartData} margin={{ top: 4, right: 16, left: 16, bottom: 4 }}>
                 <CartesianGrid stroke="var(--border)" vertical={false} />
                 <XAxis dataKey="year" tickFormatter={(v: number) => `Yr ${v}`} tick={AXIS_TICK} tickLine={false} axisLine={false} />
-                <YAxis tickFormatter={formatCompactUsd} tick={AXIS_TICK} tickLine={false} axisLine={false} />
+                <YAxis ticks={yTicks} domain={[0, yTicks[yTicks.length - 1]]} tickFormatter={formatCompactUsd} tick={AXIS_TICK} tickLine={false} axisLine={false} />
                 <Tooltip
                   formatter={(v) => typeof v === 'number' ? fmt(v) : String(v)}
                   labelFormatter={(label: number) => `Year ${label}`}
                   contentStyle={{ borderRadius: 8, border: '1px solid var(--border)', fontSize: 13 }}
                 />
-                <Legend wrapperStyle={{ fontSize: 13 }} />
-                <Area type="monotone" dataKey="Contributions" stackId="a" stroke="var(--chart-4)" fill="var(--chart-4)" fillOpacity={0.4} />
-                <Area type="monotone" dataKey="Interest" stackId="a" stroke="var(--chart-1)" fill="var(--chart-1)" fillOpacity={0.55} />
+                <Area type="monotone" dataKey="Contributions" stackId="a" stroke="var(--chart-4)" fill="var(--chart-4-tint)" fillOpacity={1} />
+                <Area type="monotone" dataKey="Interest" stackId="a" stroke="var(--chart-1)" fill="var(--chart-1-tint)" fillOpacity={1} />
               </AreaChart>
             </ResponsiveContainer>
+            <ChartLegend items={[{ label: 'Contributions', colorClass: 'bg-chart-4-tint' }, { label: 'Interest', colorClass: 'bg-chart-1-tint' }]} />
           </CardContent>
         </Card>
 

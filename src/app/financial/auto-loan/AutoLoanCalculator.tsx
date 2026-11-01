@@ -2,13 +2,13 @@
 
 import { useCalculatorUrl, type Schema } from '@/lib/hooks/use-calculator-url'
 import { calculateAutoLoan, type AutoLoanInputs } from '@/lib/engine/financial'
-import { formatCompactUsd } from '@/lib/format'
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { formatCompactUsd, niceTicks } from '@/lib/format'
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Field } from '@/components/common/Field'
 import { CalculatorGrid, InputPanel, ResultPanel } from '@/components/common/CalculatorLayout'
-import { ProportionBar, ResultHero, ResultStat, ResultStats, type ProportionSegment } from '@/components/common/Result'
+import { ChartLegend, ProportionBar, ResultHero, ResultStat, ResultStats, type ProportionSegment } from '@/components/common/Result'
 import { ResultActions } from '@/components/common/ResultActions'
 import { MobileResultBar } from '@/components/common/MobileResultBar'
 
@@ -39,6 +39,7 @@ export function AutoLoanCalculator() {
       interestPaid: slice.reduce((s, r) => s + r.interest, 0),
     })
   }
+  const yTicks = niceTicks(Math.max(0, ...yearlyData.map((row) => row.principalPaid + row.interestPaid)))
 
   const canExport = inputs.vehiclePrice > 0 && inputs.loanTermMonths > 0 && result.loanBalance > 0
 
@@ -79,7 +80,7 @@ export function AutoLoanCalculator() {
 
         <ResultStats>
           <ResultStat label="Loan Amount" value={fmt(result.loanBalance)} />
-          <ResultStat label="Total Interest" value={fmt(result.totalInterestPaid)} />
+          <ResultStat label="Total Interest" value={fmt(result.totalInterestPaid)} swatchClass="bg-chart-2" />
         </ResultStats>
 
         <ResultActions
@@ -102,17 +103,17 @@ export function AutoLoanCalculator() {
               <AreaChart data={yearlyData} margin={{ top: 4, right: 16, left: 16, bottom: 4 }}>
                 <CartesianGrid stroke="var(--border)" vertical={false} />
                 <XAxis dataKey="year" tickFormatter={(v: number) => `Yr ${v}`} tick={AXIS_TICK} tickLine={false} axisLine={false} />
-                <YAxis tickFormatter={formatCompactUsd} tick={AXIS_TICK} tickLine={false} axisLine={false} />
+                <YAxis ticks={yTicks} domain={[0, yTicks[yTicks.length - 1]]} tickFormatter={formatCompactUsd} tick={AXIS_TICK} tickLine={false} axisLine={false} />
                 <Tooltip
                   formatter={(v: number) => fmt(v)}
                   labelFormatter={(label: number) => `Year ${label}`}
                   contentStyle={{ borderRadius: 8, border: '1px solid var(--border)', fontSize: 13 }}
                 />
-                <Legend wrapperStyle={{ fontSize: 13 }} />
-                <Area type="monotone" dataKey="principalPaid" stackId="a" stroke="var(--chart-1)" fill="var(--chart-1)" fillOpacity={0.55} name="Principal" />
-                <Area type="monotone" dataKey="interestPaid" stackId="a" stroke="var(--chart-2)" fill="var(--chart-2)" fillOpacity={0.4} name="Interest" />
+                <Area type="monotone" dataKey="principalPaid" stackId="a" stroke="var(--chart-1)" fill="var(--chart-1-tint)" fillOpacity={1} name="Principal" />
+                <Area type="monotone" dataKey="interestPaid" stackId="a" stroke="var(--chart-2)" fill="var(--chart-2-tint)" fillOpacity={1} name="Interest" />
               </AreaChart>
             </ResponsiveContainer>
+            <ChartLegend items={[{ label: 'Principal', colorClass: 'bg-chart-1-tint' }, { label: 'Interest', colorClass: 'bg-chart-2-tint' }]} />
           </CardContent>
         </Card>
 

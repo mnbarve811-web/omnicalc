@@ -2,7 +2,7 @@
 
 import { useCalculatorUrl, type Schema } from '@/lib/hooks/use-calculator-url'
 import { calculateMortgage, type MortgageInputs } from '@/lib/engine/financial'
-import { formatCompactUsd } from '@/lib/format'
+import { formatCompactUsd, niceTicks } from '@/lib/format'
 import {
   AreaChart,
   Area,
@@ -10,7 +10,6 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
 } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -25,7 +24,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Field } from '@/components/common/Field'
 import { CalculatorGrid, InputPanel, ResultPanel } from '@/components/common/CalculatorLayout'
-import { ProportionBar, ResultHero, ResultStat, ResultStats, type ProportionSegment } from '@/components/common/Result'
+import { ChartLegend, ProportionBar, ResultHero, ResultStat, ResultStats, type ProportionSegment } from '@/components/common/Result'
 import { ResultActions } from '@/components/common/ResultActions'
 import { MobileResultBar } from '@/components/common/MobileResultBar'
 
@@ -73,15 +72,17 @@ export function MortgageCalculator() {
     yearlyData.push({ year, principalPaid, interestPaid, balance })
   }
 
+  const yTicks = niceTicks(Math.max(0, ...yearlyData.map((row) => row.principalPaid + row.interestPaid)))
+
   const loanAmount = Math.max(0, values.homePrice - values.downPayment)
   const canExport = values.homePrice > 0 && values.loanTermYears > 0 && loanAmount > 0
 
   const breakdown: ProportionSegment[] = result.monthlyTotal > 0
     ? [
         { label: 'Principal & interest', value: result.monthlyPrincipalAndInterest, display: fmtCurrency(result.monthlyPrincipalAndInterest), colorClass: 'bg-chart-1' },
-        { label: 'Property tax', value: values.propertyTax, display: fmtCurrency(values.propertyTax), colorClass: 'bg-chart-4' },
-        { label: 'Insurance', value: values.homeInsurance, display: fmtCurrency(values.homeInsurance), colorClass: 'bg-chart-4/60' },
-        { label: 'HOA', value: values.hoa, display: fmtCurrency(values.hoa), colorClass: 'bg-chart-4/30' },
+        { label: 'Property tax', value: values.propertyTax, display: fmtCurrency(values.propertyTax), colorClass: 'bg-chart-2' },
+        { label: 'Insurance', value: values.homeInsurance, display: fmtCurrency(values.homeInsurance), colorClass: 'bg-chart-4' },
+        { label: 'HOA', value: values.hoa, display: fmtCurrency(values.hoa), colorClass: 'bg-chart-4-tint' },
       ]
     : []
 
@@ -104,7 +105,7 @@ export function MortgageCalculator() {
 
         <ResultStats>
           <ResultStat label="Monthly P&I" value={fmtCurrency(result.monthlyPrincipalAndInterest)} />
-          <ResultStat label="Total Interest" value={fmtCurrency(result.totalInterestPaid)} />
+          <ResultStat label="Total Interest" value={fmtCurrency(result.totalInterestPaid)} swatchClass="bg-chart-2" />
           <ResultStat label="Loan Amount" value={fmtCurrency(loanAmount)} />
         </ResultStats>
 
@@ -131,21 +132,20 @@ export function MortgageCalculator() {
               <AreaChart data={yearlyData} margin={{ top: 4, right: 16, left: 16, bottom: 4 }}>
                 <CartesianGrid stroke="var(--border)" vertical={false} />
                 <XAxis dataKey="year" tickFormatter={(v: number) => `Yr ${v}`} tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }} tickLine={false} axisLine={false} />
-                <YAxis tickFormatter={formatCompactUsd} tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }} tickLine={false} axisLine={false} />
+                <YAxis ticks={yTicks} domain={[0, yTicks[yTicks.length - 1]]} tickFormatter={formatCompactUsd} tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }} tickLine={false} axisLine={false} />
                 <Tooltip
                   formatter={(value: number) => fmtCurrency(value)}
                   labelFormatter={(label: number) => `Year ${label}`}
                   contentStyle={{ borderRadius: 8, border: '1px solid var(--border)', fontSize: 13 }}
                 />
-                <Legend wrapperStyle={{ fontSize: 13 }} />
                 <Area
                   type="monotone"
                   dataKey="principalPaid"
                   stackId="a"
                   name="Principal Paid"
                   stroke="var(--chart-1)"
-                  fill="var(--chart-1)"
-                  fillOpacity={0.55}
+                  fill="var(--chart-1-tint)"
+                  fillOpacity={1}
                 />
                 <Area
                   type="monotone"
@@ -153,11 +153,12 @@ export function MortgageCalculator() {
                   stackId="a"
                   name="Interest Paid"
                   stroke="var(--chart-2)"
-                  fill="var(--chart-2)"
-                  fillOpacity={0.4}
+                  fill="var(--chart-2-tint)"
+                  fillOpacity={1}
                 />
               </AreaChart>
             </ResponsiveContainer>
+            <ChartLegend items={[{ label: 'Principal Paid', colorClass: 'bg-chart-1-tint' }, { label: 'Interest Paid', colorClass: 'bg-chart-2-tint' }]} />
           </CardContent>
         </Card>
 
@@ -170,23 +171,23 @@ export function MortgageCalculator() {
 
           <TabsContent value="yearly">
             <Card>
-              <CardContent className="pt-4">
+              <CardContent>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Year</TableHead>
-                      <TableHead>Principal Paid</TableHead>
-                      <TableHead>Interest Paid</TableHead>
-                      <TableHead>Remaining Balance</TableHead>
+                      <TableHead className="text-right">Year</TableHead>
+                      <TableHead className="text-right">Principal Paid</TableHead>
+                      <TableHead className="text-right">Interest Paid</TableHead>
+                      <TableHead className="text-right">Remaining Balance</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {yearlyData.map((row) => (
                       <TableRow key={row.year}>
-                        <TableCell>{row.year}</TableCell>
-                        <TableCell>{fmtCurrency(row.principalPaid)}</TableCell>
-                        <TableCell>{fmtCurrency(row.interestPaid)}</TableCell>
-                        <TableCell>{fmtCurrency(row.balance)}</TableCell>
+                        <TableCell className="text-right">{row.year}</TableCell>
+                        <TableCell className="text-right">{fmtCurrency(row.principalPaid)}</TableCell>
+                        <TableCell className="text-right">{fmtCurrency(row.interestPaid)}</TableCell>
+                        <TableCell className="text-right">{fmtCurrency(row.balance)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -197,25 +198,25 @@ export function MortgageCalculator() {
 
           <TabsContent value="monthly">
             <Card>
-              <CardContent className="pt-4">
+              <CardContent>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Month</TableHead>
-                      <TableHead>Payment</TableHead>
-                      <TableHead>Principal</TableHead>
-                      <TableHead>Interest</TableHead>
-                      <TableHead>Balance</TableHead>
+                      <TableHead className="text-right">Month</TableHead>
+                      <TableHead className="text-right">Payment</TableHead>
+                      <TableHead className="text-right">Principal</TableHead>
+                      <TableHead className="text-right">Interest</TableHead>
+                      <TableHead className="text-right">Balance</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {schedule.map((row) => (
                       <TableRow key={row.month}>
-                        <TableCell>{row.month}</TableCell>
-                        <TableCell>{fmtCurrency(row.payment)}</TableCell>
-                        <TableCell>{fmtCurrency(row.principal)}</TableCell>
-                        <TableCell>{fmtCurrency(row.interest)}</TableCell>
-                        <TableCell>{fmtCurrency(row.balance)}</TableCell>
+                        <TableCell className="text-right">{row.month}</TableCell>
+                        <TableCell className="text-right">{fmtCurrency(row.payment)}</TableCell>
+                        <TableCell className="text-right">{fmtCurrency(row.principal)}</TableCell>
+                        <TableCell className="text-right">{fmtCurrency(row.interest)}</TableCell>
+                        <TableCell className="text-right">{fmtCurrency(row.balance)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
