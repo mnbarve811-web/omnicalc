@@ -49,8 +49,10 @@ export function StatisticsCalculator() {
         { label: 'Range', value: fmt(result.range) },
         { label: 'Min', value: fmt(result.min) },
         { label: 'Max', value: fmt(result.max) },
-        { label: 'Variance', value: fmt(result.variance) },
-        { label: 'Std Dev', value: fmt(result.standardDeviation) },
+        { label: 'Variance (population)', value: fmt(result.variance) },
+        { label: 'Std Dev (population)', value: fmt(result.standardDeviation) },
+        { label: 'Variance (sample)', value: result.sampleVariance === null ? '—' : fmt(result.sampleVariance) },
+        { label: 'Std Dev (sample)', value: result.sampleStandardDeviation === null ? '—' : fmt(result.sampleStandardDeviation) },
       ]
     : []
 

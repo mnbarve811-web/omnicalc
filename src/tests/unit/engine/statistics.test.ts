@@ -47,7 +47,8 @@ describe('calculateStatistics', () => {
 describe('calculateStatistics edge cases', () => {
   it('single value: every statistic collapses to that value', () => {
     expect(calculateStatistics({ values: [-4.5] })).toEqual({
-      count: 1, sum: -4.5, mean: -4.5, median: -4.5, mode: [], range: 0, variance: 0, standardDeviation: 0, min: -4.5, max: -4.5,
+      count: 1, sum: -4.5, mean: -4.5, median: -4.5, mode: [], range: 0, variance: 0, standardDeviation: 0,
+      sampleVariance: null, sampleStandardDeviation: null, min: -4.5, max: -4.5,
     })
   })
   it('even count: median averages the two middle values of the sorted data', () => {
@@ -69,6 +70,16 @@ describe('calculateStatistics edge cases', () => {
   })
   it('uses population variance (divides by n)', () => {
     expect(calculateStatistics({ values: [1, 2, 3, 4] }).variance).toBe(1.25)
+  })
+  it('sample variance divides by n - 1', () => {
+    const r = calculateStatistics({ values: [1, 2, 3, 4] })
+    expect(r.sampleVariance).toBeCloseTo(5 / 3, 12)
+    expect(r.sampleStandardDeviation).toBeCloseTo(Math.sqrt(5 / 3), 12)
+  })
+  it('sample statistics of [2,4,4,4,5,5,7,9]: variance 32/7', () => {
+    const r = calculateStatistics({ values: [2, 4, 4, 4, 5, 5, 7, 9] })
+    expect(r.sampleVariance).toBeCloseTo(32 / 7, 12)
+    expect(r.sampleStandardDeviation).toBeCloseTo(Math.sqrt(32 / 7), 12)
   })
   it('handles decimals', () => {
     const r = calculateStatistics({ values: [0.1, 0.2, 0.3] })

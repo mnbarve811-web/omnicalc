@@ -119,7 +119,8 @@ test.describe('Statistics calculator', () => {
     await visit(page, '/math/statistics')
     await expectPageBasics(page, '/math/statistics', 'Statistics Calculator')
     await expect(statValue(page, 'Mean')).toHaveText('5')
-    await expect(statValue(page, 'Std Dev')).toHaveText('2')
+    await expect(statValue(page, 'Std Dev (population)')).toHaveText('2')
+    await expect(statValue(page, 'Std Dev (sample)')).toHaveText('2.1381')
     await expect(page.locator('[data-slot="card-title"]').getByText('Frequency Distribution', { exact: true })).toBeVisible()
   })
 
@@ -137,8 +138,10 @@ test.describe('Statistics calculator', () => {
     await expect(statValue(page, 'Range')).toHaveText(fmt(expected.range))
     await expect(statValue(page, 'Min')).toHaveText(fmt(expected.min))
     await expect(statValue(page, 'Max')).toHaveText(fmt(expected.max))
-    await expect(statValue(page, 'Variance')).toHaveText(fmt(expected.variance))
-    await expect(statValue(page, 'Std Dev')).toHaveText(fmt(expected.standardDeviation))
+    await expect(statValue(page, 'Variance (population)')).toHaveText(fmt(expected.variance))
+    await expect(statValue(page, 'Std Dev (population)')).toHaveText(fmt(expected.standardDeviation))
+    await expect(statValue(page, 'Variance (sample)')).toHaveText(fmt(expected.sampleVariance!))
+    await expect(statValue(page, 'Std Dev (sample)')).toHaveText(fmt(expected.sampleStandardDeviation!))
   })
 
   test('handles negative numbers and decimals', async ({ page }) => {
@@ -159,6 +162,13 @@ test.describe('Statistics calculator', () => {
     await expect(page.getByText('No valid numbers found.', { exact: true })).toBeVisible()
     await expect(statValue(page, 'Mean')).toHaveCount(0)
     await expectExportDisabled(page)
+  })
+
+  test('shows a dash for sample statistics with a single value', async ({ page }) => {
+    await visit(page, '/math/statistics')
+    await page.locator('textarea').fill('7')
+    await expect(statValue(page, 'Std Dev (population)')).toHaveText('0')
+    await expect(statValue(page, 'Std Dev (sample)')).toHaveText('—')
   })
 
   test('reflects the dataset in the URL query', async ({ page }) => {

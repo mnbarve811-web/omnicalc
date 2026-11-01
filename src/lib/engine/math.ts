@@ -50,6 +50,8 @@ export interface StatisticsResult {
   range: number
   variance: number
   standardDeviation: number
+  sampleVariance: number | null           // null below two values, where dividing by n - 1 is undefined
+  sampleStandardDeviation: number | null
   min: number
   max: number
 }
@@ -70,8 +72,11 @@ export function calculateStatistics({ values }: StatisticsInputs): StatisticsRes
 
   const range = max - min
 
-  const variance = values.reduce((acc, x) => acc + (x - mean) ** 2, 0) / count
+  const sumOfSquares = values.reduce((acc, x) => acc + (x - mean) ** 2, 0)
+  const variance = sumOfSquares / count
   const standardDeviation = Math.sqrt(variance)
+  const sampleVariance = count >= 2 ? sumOfSquares / (count - 1) : null
+  const sampleStandardDeviation = sampleVariance === null ? null : Math.sqrt(sampleVariance)
 
   // No value stands out when every frequency ties (all unique or all identical), so mode is [].
   const freq = new Map<number, number>()
@@ -82,7 +87,7 @@ export function calculateStatistics({ values }: StatisticsInputs): StatisticsRes
   const allSameFreq = freqValues.every(f => f === maxFreq)
   const mode = allSameFreq ? [] : freqEntries.filter(([, f]) => f === maxFreq).map(([v]) => v)
 
-  return { count, sum, mean, median, mode, range, variance, standardDeviation, min, max }
+  return { count, sum, mean, median, mode, range, variance, standardDeviation, sampleVariance, sampleStandardDeviation, min, max }
 }
 
 // --- Fractions ---
