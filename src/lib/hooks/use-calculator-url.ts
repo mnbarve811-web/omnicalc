@@ -46,7 +46,8 @@ export function useCalculatorUrl<T extends Record<string, unknown>>(
     for (const [key, fieldRaw] of Object.entries(schema)) {
       const field = fieldRaw as FieldDef<unknown>
       const val = (next as Record<string, unknown>)[key]
-      if (val !== field.default) {
+      // Compared serialized so a list edited back to its default content is still omitted
+      if (field.serialize(val) !== field.serialize(field.default)) {
         params.set(field.param, field.serialize(val))
         hasNonDefault = true
       }
@@ -56,4 +57,36 @@ export function useCalculatorUrl<T extends Record<string, unknown>>(
   }
 
   return [values, setValues]
+}
+
+// URLs are untrusted input, and every item adds work to the per-month simulations
+const MAX_LIST_ITEMS = 50
+
+// '_' and '~' are left alone by encodeURIComponent, so they are escaped by hand to keep them free as separators
+function encodeListPart(part: string | number): string {
+  return encodeURIComponent(String(part)).replace(/[_~]/g, c => `%${c.charCodeAt(0).toString(16).toUpperCase()}`)
+}
+
+// Items are joined by '_' and their fields by '~'; both survive URLSearchParams unencoded, so links stay readable
+export function listField<Item extends object>(
+  param: string,
+  defaultValue: Item[],
+  toParts: (item: Item) => (string | number)[],
+  fromParts: (parts: string[]) => Item,
+): FieldDef<Item[]> {
+  return {
+    param,
+    default: defaultValue,
+    serialize: items => items.map(item => toParts(item).map(encodeListPart).join('~')).join('_'),
+    parse: raw => {
+      if (raw === '') return []
+      return raw.split('_').slice(0, MAX_LIST_ITEMS).map(chunk => {
+        const item = fromParts(chunk.split('~').map(decodeURIComponent))
+        if (Object.values(item).some(v => typeof v === 'number' && !Number.isFinite(v))) {
+          throw new Error(`Invalid number in ${param}`)
+        }
+        return item
+      })
+    },
+  }
 }
