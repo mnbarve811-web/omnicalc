@@ -92,7 +92,7 @@ test.describe('Unit Converter', () => {
       has: page.locator('[data-slot="card-title"]').getByText('Result', { exact: true }),
     })
   const resultValue = (page: Page) => resultHero(page).locator('[data-slot="card-content"]')
-  const formulaText = (page: Page) => resultHero(page).locator('[data-slot="card-content"] + div')
+  const formulaText = (page: Page) => resultHero(page).locator('[data-slot="card-description"]')
   const categorySelect = (page: Page) => page.locator('main select').nth(0)
   const fromSelect = (page: Page) => page.locator('main select').nth(1)
   const toSelect = (page: Page) => page.locator('main select').nth(2)

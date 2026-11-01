@@ -13,6 +13,7 @@ interface MobileResultBarProps {
 // It repeats only the value, never the result label, so label-based lookups still find a single element.
 export function MobileResultBar({ targetId, value, caption }: MobileResultBarProps) {
   const [isTargetBelow, setIsTargetBelow] = useState(false)
+  const [isEditingField, setIsEditingField] = useState(false)
 
   useEffect(() => {
     const target = document.getElementById(targetId)
@@ -24,7 +25,19 @@ export function MobileResultBar({ targetId, value, caption }: MobileResultBarPro
     return () => observer.disconnect()
   }, [targetId])
 
-  if (!isTargetBelow) return null
+  // While a field has focus the on-screen keyboard shrinks the viewport, and a fixed bar could sit over the field
+  useEffect(() => {
+    const startEditing = () => setIsEditingField(document.activeElement?.matches('input, select, textarea') ?? false)
+    const stopEditing = () => setIsEditingField(false)
+    document.addEventListener('focusin', startEditing)
+    document.addEventListener('focusout', stopEditing)
+    return () => {
+      document.removeEventListener('focusin', startEditing)
+      document.removeEventListener('focusout', stopEditing)
+    }
+  }, [])
+
+  if (!isTargetBelow || isEditingField) return null
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-8px_24px_-16px_rgba(20,27,45,0.3)] lg:hidden">

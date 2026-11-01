@@ -108,12 +108,12 @@ export function PregnancyCalculator() {
                 </ul>
               </figure>
             </ResultHero>
-    
+
             <ResultStats>
               <ResultStat label="Current Week" value={`Week ${currentWeek} of 40`} />
               <ResultStat label="Trimester" value={TRIMESTER_LABELS[trimester - 1]} />
             </ResultStats>
-    
+
             <ResultActions
               resultsId="pregnancy-results"
               filename="pregnancy-due-date"

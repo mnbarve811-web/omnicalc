@@ -19,22 +19,23 @@ export function ResultHero({ label, value, caption, children }: ResultHeroProps)
   return (
     <section
       data-slot="card"
-      aria-live="polite"
-      aria-atomic="true"
       className="rounded-lg border border-border bg-card p-5 shadow-[0_1px_2px_rgba(20,27,45,0.04),0_8px_24px_-18px_rgba(20,27,45,0.22)] md:p-6"
     >
-      <p data-slot="card-title" className="text-sm font-medium text-muted-foreground">
-        {label}
-      </p>
-      {/* Re-keying on value restarts the flash so each change is visible; the first render never flashes */}
-      <p
-        key={value}
-        data-slot="card-content"
-        className={`mt-1 w-fit rounded-sm text-[2.75rem] font-semibold leading-none tracking-[-0.035em] tabular-nums text-foreground md:text-6xl ${hasChanged ? 'omni-flash' : ''}`}
-      >
-        {value}
-      </p>
-      {caption && <div className="mt-2 text-sm text-muted-foreground">{caption}</div>}
+      {/* Only the label and value are announced; the caption and breakdown would be re-read on every keystroke */}
+      <div aria-live="polite" aria-atomic="true">
+        <p data-slot="card-title" className="text-sm font-medium text-muted-foreground">
+          {label}
+        </p>
+        {/* Re-keying on value restarts the flash so each change is visible; the first render never flashes */}
+        <p
+          key={value}
+          data-slot="card-content"
+          className={`mt-1 w-fit rounded-sm text-[2.75rem] font-semibold leading-none tracking-[-0.035em] tabular-nums text-foreground md:text-6xl ${hasChanged ? 'omni-flash' : ''}`}
+        >
+          {value}
+        </p>
+      </div>
+      {caption && <div data-slot="card-description" className="mt-2 text-sm text-muted-foreground">{caption}</div>}
       {children && <div className="mt-5">{children}</div>}
     </section>
   )

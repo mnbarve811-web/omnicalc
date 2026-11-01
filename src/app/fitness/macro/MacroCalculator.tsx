@@ -81,7 +81,7 @@ export function MacroCalculator() {
                 type="button"
                 aria-pressed={values.goal === key}
                 onClick={() => setValues({ goal: key })}
-                className={`flex-1 py-2 rounded-md text-sm font-medium border transition-colors ${
+                className={`min-h-11 flex-1 py-2 rounded-md text-sm md:min-h-10 font-medium border transition-colors ${
                   values.goal === key
                     ? 'bg-primary text-primary-foreground border-primary'
                     : 'bg-background border-border hover:bg-muted'
@@ -102,7 +102,7 @@ export function MacroCalculator() {
                 type="button"
                 aria-pressed={values.split === key}
                 onClick={() => setValues({ split: key })}
-                className={`flex-1 py-2 rounded-md text-sm font-medium border transition-colors ${
+                className={`min-h-11 flex-1 py-2 rounded-md text-sm md:min-h-10 font-medium border transition-colors ${
                   values.split === key
                     ? 'bg-primary text-primary-foreground border-primary'
                     : 'bg-background border-border hover:bg-muted'

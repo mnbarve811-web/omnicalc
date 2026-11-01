@@ -83,7 +83,7 @@ export function TDEECalculator() {
                 key={g}
                 aria-pressed={values.gender === g}
                 onClick={() => setValues({ gender: g })}
-                className={`flex-1 py-2 rounded-md border text-sm font-medium transition-colors ${
+                className={`min-h-11 flex-1 py-2 rounded-md md:min-h-10 border text-sm font-medium transition-colors ${
                   values.gender === g
                     ? 'bg-primary text-primary-foreground border-primary'
                     : 'bg-background border-border hover:bg-muted'
@@ -108,7 +108,7 @@ export function TDEECalculator() {
                 key={value}
                 aria-pressed={values.activityLevel === value}
                 onClick={() => setValues({ activityLevel: value })}
-                className={`w-full text-left px-3 py-2 rounded-md border text-sm transition-colors ${
+                className={`min-h-11 w-full text-left px-3 py-2 rounded-md md:min-h-10 border text-sm transition-colors ${
                   values.activityLevel === value
                     ? 'bg-primary text-primary-foreground border-primary'
                     : 'bg-background border-border hover:bg-muted'

@@ -102,13 +102,13 @@ export function DateDiffCalculator() {
                 </p>
               }
             />
-    
+
             <ResultStats>
               <ResultStat label="Years" value={result.years.toLocaleString()} />
               <ResultStat label="Months" value={result.months.toLocaleString()} />
               <ResultStat label="Days" value={result.days.toLocaleString()} />
             </ResultStats>
-    
+
             <ResultActions
               resultsId="date-diff-results"
               filename="date-difference"

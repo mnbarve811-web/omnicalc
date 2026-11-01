@@ -83,7 +83,7 @@ export function BodyFatCalculator() {
                 type="button"
                 aria-pressed={values.gender === g}
                 onClick={() => setValues({ gender: g })}
-                className={`flex-1 py-2 px-4 rounded-md border text-sm font-medium transition-colors ${
+                className={`min-h-11 flex-1 py-2 px-4 rounded-md md:min-h-10 border text-sm font-medium transition-colors ${
                   values.gender === g
                     ? 'bg-primary text-primary-foreground border-primary'
                     : 'bg-background border-input hover:bg-muted'

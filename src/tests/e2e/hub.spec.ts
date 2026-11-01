@@ -47,3 +47,29 @@ test('footer links jump to the about, privacy, and terms sections', async ({ pag
     await page.goto('/')
   }
 })
+
+test('buttons and tabs on calculator pages meet the 44px mobile touch target', async ({ page, viewport }) => {
+  test.skip(!viewport || viewport.width >= 768, 'touch target size applies to the mobile layout')
+  const undersized: string[] = []
+  for (const path of ['/financial/mortgage', '/financial/debt-payoff', '/fitness/tdee', '/fitness/body-fat', '/fitness/macro']) {
+    await page.goto(path)
+    await page.locator('[data-export-buttons]').waitFor()
+    for (const control of await page.locator('main button, main [role="tab"]').all()) {
+      if (!(await control.isVisible())) continue
+      const box = await control.boundingBox()
+      if (box && box.height < 44) undersized.push(`${path} "${(await control.innerText()).trim()}" ${Math.round(box.height)}px`)
+    }
+  }
+  expect(undersized).toEqual([])
+})
+
+test('the mobile result bar hides while a field has focus so it cannot cover it', async ({ page, viewport }) => {
+  test.skip(!viewport || viewport.width >= 1024, 'the result bar only exists below the desktop layout')
+  await page.goto('/financial/mortgage')
+  const bar = page.getByRole('link', { name: /See breakdown/ })
+  await expect(bar).toBeVisible()
+  await page.getByLabel('Home Price', { exact: true }).focus()
+  await expect(bar).toBeHidden()
+  await page.getByLabel('Home Price', { exact: true }).blur()
+  await expect(bar).toBeVisible()
+})
