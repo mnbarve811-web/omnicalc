@@ -297,6 +297,51 @@ test.describe('Financial calculators', () => {
       await setField(page, 'Retirement Age', '25', 'retire')
       await expectExportDisabled(page)
     })
+
+    test('employer match and salary contributions raise the projected balance', async ({ page }) => {
+      await page.goto('/financial/retirement')
+      await page.getByRole('button', { name: 'Workplace plan and employer match' }).click()
+      await setField(page, 'Annual Salary ($)', '100000', 'salary')
+      await setField(page, 'Your Contribution (% of salary)', '10', 'contrib')
+      await setField(page, 'Annual Salary Increase (%)', '2', 'raise')
+      const expected = calculateRetirement({
+        ...RETIREMENT_DEFAULTS,
+        annualSalary: 100000, employeeContributionPct: 10, employerMatchPct: 50, employerMatchCapPct: 6, salaryIncreasePct: 2,
+      })
+      expect(expected.balanceAtRetirement).toBeGreaterThan(calculateRetirement(RETIREMENT_DEFAULTS).balanceAtRetirement)
+      await expect(cardValue(page, 'Balance at Retirement')).toHaveText(usd.format(expected.balanceAtRetirement))
+    })
+
+    test('inflation, social security and post-retirement return restore from the URL', async ({ page }) => {
+      await page.goto('/financial/retirement?infl=3&ss=2000&ssage=67&postret=5')
+      await expect(field(page, 'Inflation Rate (%)')).toHaveValue('3')
+      await expect(field(page, 'Return After Retirement (%)')).toHaveValue('5')
+      await expect(field(page, 'Monthly Benefit ($)')).toHaveValue('2000')
+      await expect(field(page, 'Benefit Start Age')).toHaveValue('67')
+      const expected = calculateRetirement({
+        ...RETIREMENT_DEFAULTS,
+        inflationRate: 3, postRetirementReturn: 5, socialSecurityMonthly: 2000, socialSecurityStartAge: 67,
+      })
+      await expect(cardValue(page, 'Balance at Retirement')).toHaveText(usd.format(expected.balanceAtRetirement))
+      await expect(page.getByText(`about ${usd.format(expected.balanceAtRetirementToday)} in today's dollars`)).toBeVisible()
+      await expect(cardValue(page, 'Monthly Withdrawal at Retirement')).toHaveText(usd.format(expected.firstYearWithdrawal / 12))
+      const runout = expected.projectedRunout === null ? 'Never' : `Age ${expected.projectedRunout}`
+      await expect(cardValue(page, 'Funds Run Out')).toHaveText(runout)
+    })
+
+    test('monthly expenses edit the same spending as the annual field', async ({ page }) => {
+      await page.goto('/financial/retirement')
+      await expect(field(page, 'Monthly Expenses in Retirement ($)')).toHaveValue('5000')
+      await field(page, 'Monthly Expenses in Retirement ($)').fill('4000')
+      await expect(page).toHaveURL(/[?&]expenses=48000(&|$)/)
+      await expect(field(page, 'Annual Expenses in Retirement ($)')).toHaveValue('48000')
+    })
+
+    test('flags a retirement age before the current age', async ({ page }) => {
+      await page.goto('/financial/retirement')
+      await setField(page, 'Retirement Age', '25', 'retire')
+      await expect(page.getByRole('alert').filter({ hasText: 'Must be at or after your current age' })).toBeVisible()
+    })
   })
 
   test.describe('auto loan', () => {
