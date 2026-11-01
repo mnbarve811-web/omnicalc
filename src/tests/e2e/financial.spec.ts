@@ -4,9 +4,11 @@ import {
   calculateAutoLoan,
   calculateCompoundInterest,
   calculateDebtPayoff,
+  calculateMinimumPaymentsOnly,
   calculateMortgage,
   calculateRetirement,
   calculateSalary,
+  getDebtFreeDate,
   type AutoLoanInputs,
   type CompoundInterestInputs,
   type DebtItem,
@@ -528,6 +530,15 @@ test.describe('Financial calculators', () => {
   test.describe('debt payoff', () => {
     const debtRows = (page: Page) => page.getByRole('group', { name: /^Debt \d+$/ })
     const extraInput = (page: Page) => field(page, 'Extra Monthly Payment')
+    const lumpRows = (page: Page) => page.getByRole('group', { name: /^Lump sum \d+$/ })
+    const comparisonRow = (page: Page, scenario: string) => page.getByRole('row').filter({ hasText: scenario })
+    const monthYear = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' })
+
+    // Names in these tests contain no '_' or '~', so plain encodeURIComponent matches the list encoding
+    async function expectDebtsInUrl(page: Page, debts: DebtItem[]) {
+      const expected = debts.map(d => [d.name, d.balance, d.interestRate, d.minimumPayment].map(p => encodeURIComponent(String(p))).join('~')).join('_')
+      await expect.poll(() => new URL(page.url()).searchParams.get('debts')).toBe(expected)
+    }
 
     test('renders heading, results, guide, FAQ and structured data', async ({ page }) => {
       await page.goto('/financial/debt-payoff')
@@ -573,7 +584,7 @@ test.describe('Financial calculators', () => {
 
     test('exports CSV and PDF, and disables export when a minimum payment is zero', async ({ page }) => {
       await page.goto('/financial/debt-payoff')
-      await expectCsvDownload(page, 'Strategy,Selected,Months to Debt-Free,Total Interest Paid,Payoff Order', 2)
+      await expectCsvDownload(page, 'Strategy,Selected,Months to Debt-Free,Debt-Free Date,Total Interest Paid,Interest Saved vs Minimums,Payoff Order', 3)
       await expectPdfDownload(page)
       await debtRows(page).nth(1).locator('input').nth(3).fill('0')
       await expectExportDisabled(page)
@@ -582,16 +593,83 @@ test.describe('Financial calculators', () => {
     test('two debts with the same name are paid off one at a time', async ({ page }) => {
       await page.goto('/financial/debt-payoff')
       const secondRow = debtRows(page).nth(1).locator('input')
+      // Debts live in the URL, so each edit waits for its write before the next edit reads the list
       await secondRow.nth(0).fill('Credit Card')
+      await expectDebtsInUrl(page, [DEFAULT_DEBTS[0], { ...DEFAULT_DEBTS[1], name: 'Credit Card' }])
       await secondRow.nth(1).fill('5000')
+      await expectDebtsInUrl(page, [DEFAULT_DEBTS[0], { ...DEFAULT_DEBTS[1], name: 'Credit Card', balance: 5000 }])
       await secondRow.nth(2).fill('20')
+      await expectDebtsInUrl(page, [DEFAULT_DEBTS[0], { ...DEFAULT_DEBTS[0], minimumPayment: 200 }])
       await secondRow.nth(3).fill('100')
+      await expectDebtsInUrl(page, [DEFAULT_DEBTS[0], DEFAULT_DEBTS[0]])
       const distinct = calculateDebtPayoff({
         debts: [DEFAULT_DEBTS[0], { ...DEFAULT_DEBTS[0], name: 'Credit Card 2' }],
         strategy: 'avalanche',
         extraMonthlyPayment: 0,
       })
       await expect(cardValue(page, 'Months to Debt-Free')).toHaveText(String(distinct.monthsToDebtFree))
+    })
+
+    test('debts and lump sums restore from the URL', async ({ page }) => {
+      await page.goto('/financial/debt-payoff?debts=Visa~3000~18~90_Loan~6000~7~150&lump=6~1000')
+      await expect(debtRows(page)).toHaveCount(2)
+      await expect(debtRows(page).nth(0).locator('input').nth(0)).toHaveValue('Visa')
+      await expect(lumpRows(page)).toHaveCount(1)
+      await expect(lumpRows(page).nth(0).locator('input').nth(0)).toHaveValue('6')
+      await expect(lumpRows(page).nth(0).locator('input').nth(1)).toHaveValue('1000')
+      const expected = calculateDebtPayoff({
+        debts: [
+          { name: 'Visa', balance: 3000, interestRate: 18, minimumPayment: 90 },
+          { name: 'Loan', balance: 6000, interestRate: 7, minimumPayment: 150 },
+        ],
+        strategy: 'avalanche',
+        extraMonthlyPayment: 0,
+        lumpSums: [{ month: 6, amount: 1000 }],
+      })
+      await expect(cardValue(page, 'Months to Debt-Free')).toHaveText(String(expected.monthsToDebtFree))
+      await expect(cardValue(page, 'Total Interest Paid')).toHaveText(usd.format(expected.totalInterestPaid))
+    })
+
+    test('an edited debt list survives a reload', async ({ page }) => {
+      await page.goto('/financial/debt-payoff')
+      await debtRows(page).nth(0).locator('input').nth(1).fill('9000')
+      const edited = [{ ...DEFAULT_DEBTS[0], balance: 9000 }, DEFAULT_DEBTS[1]]
+      await expectDebtsInUrl(page, edited)
+      await page.reload()
+      await expect(debtRows(page).nth(0).locator('input').nth(1)).toHaveValue('9000')
+      const expected = calculateDebtPayoff({ debts: edited, strategy: 'avalanche', extraMonthlyPayment: 0 })
+      await expect(cardValue(page, 'Months to Debt-Free')).toHaveText(String(expected.monthsToDebtFree))
+    })
+
+    test('a debt with a negative balance in the URL falls back to the default debts', async ({ page }) => {
+      await page.goto('/financial/debt-payoff?debts=Visa~-5~18~90')
+      await expect(debtRows(page)).toHaveCount(DEFAULT_DEBTS.length)
+      await expect(debtRows(page).nth(0).locator('input').nth(0)).toHaveValue(DEFAULT_DEBTS[0].name)
+    })
+
+    test('adding a lump sum shortens the plan and is written to the URL', async ({ page }) => {
+      await page.goto('/financial/debt-payoff')
+      await page.getByRole('button', { name: '+ Add Lump Sum' }).click()
+      await lumpRows(page).nth(0).locator('input').nth(1).fill('3000')
+      await expect.poll(() => new URL(page.url()).searchParams.get('lump')).toBe('12~3000')
+      const without = calculateDebtPayoff({ debts: DEFAULT_DEBTS, strategy: 'avalanche', extraMonthlyPayment: 0 })
+      const withLump = calculateDebtPayoff({ debts: DEFAULT_DEBTS, strategy: 'avalanche', extraMonthlyPayment: 0, lumpSums: [{ month: 12, amount: 3000 }] })
+      expect(withLump.monthsToDebtFree).toBeLessThan(without.monthsToDebtFree)
+      await expect(cardValue(page, 'Months to Debt-Free')).toHaveText(String(withLump.monthsToDebtFree))
+    })
+
+    test('shows the debt-free date and compares against minimum payments only', async ({ page }) => {
+      await page.goto('/financial/debt-payoff')
+      const avalanche = calculateDebtPayoff({ debts: DEFAULT_DEBTS, strategy: 'avalanche', extraMonthlyPayment: 0 })
+      const baseline = calculateMinimumPaymentsOnly(DEFAULT_DEBTS)
+      const saved = usd.format(baseline.totalInterestPaid - avalanche.totalInterestPaid)
+      await expect(cardValue(page, 'Debt-Free Date')).toHaveText(monthYear.format(getDebtFreeDate(new Date(), avalanche.monthsToDebtFree)))
+      await expect(cardValue(page, 'Interest Saved vs Minimums')).toHaveText(saved)
+
+      const baselineRow = comparisonRow(page, 'Minimum payments only')
+      await expect(baselineRow).toContainText(String(baseline.monthsToDebtFree))
+      await expect(baselineRow).toContainText(usd.format(baseline.totalInterestPaid))
+      await expect(comparisonRow(page, 'Avalanche')).toContainText(saved)
     })
   })
 })

@@ -9,10 +9,16 @@ export interface DebtItem {
 
 export type DebtPayoffStrategy = 'snowball' | 'avalanche'
 
+export interface LumpSumPayment {
+  month: number            // 1 = the first monthly payment
+  amount: number
+}
+
 export interface DebtPayoffInputs {
   debts: DebtItem[]
   strategy: DebtPayoffStrategy
   extraMonthlyPayment: number
+  lumpSums?: LumpSumPayment[]
 }
 
 export interface DebtPayoffResult {
@@ -22,8 +28,10 @@ export interface DebtPayoffResult {
   paidOff: boolean        // false when the 1200-month cap is hit because payments never cover the interest
 }
 
+const MAX_MONTHS = 1200 // safety cap
+
 export function calculateDebtPayoff(inputs: DebtPayoffInputs): DebtPayoffResult {
-  const { strategy, extraMonthlyPayment } = inputs
+  const { strategy, extraMonthlyPayment, lumpSums = [] } = inputs
 
   // Deep copy debts to avoid mutating input
   let debts = inputs.debts.map(d => ({ ...d }))
@@ -31,7 +39,6 @@ export function calculateDebtPayoff(inputs: DebtPayoffInputs): DebtPayoffResult 
   let month = 0
   let totalInterestPaid = 0
   const payoffOrder: string[] = []
-  const MAX_MONTHS = 1200 // safety cap
 
   // Total monthly budget is fixed: all minimums + extra.
   // The budget goes to debts in strategy order, so the target gets it all and anything left after
@@ -54,7 +61,7 @@ export function calculateDebtPayoff(inputs: DebtPayoffInputs): DebtPayoffResult 
       debt.balance += interest
     }
 
-    let remaining = totalBudget
+    let remaining = totalBudget + lumpSums.filter(l => l.month === month).reduce((sum, l) => sum + l.amount, 0)
     for (const debt of ordered) {
       if (remaining <= 0) break
       const payment = Math.min(remaining, debt.balance)
@@ -69,4 +76,38 @@ export function calculateDebtPayoff(inputs: DebtPayoffInputs): DebtPayoffResult 
   }
 
   return { monthsToDebtFree: month, totalInterestPaid, payoffOrder, paidOff: debts.length === 0 }
+}
+
+// The no-strategy baseline: each debt gets only its own minimum, and a paid-off debt's minimum is not
+// redirected to the others, so the monthly outlay shrinks as debts clear
+export function calculateMinimumPaymentsOnly(debtItems: DebtItem[]): DebtPayoffResult {
+  let debts = debtItems.map(d => ({ ...d }))
+
+  let month = 0
+  let totalInterestPaid = 0
+  const payoffOrder: string[] = []
+
+  while (debts.length > 0 && month < MAX_MONTHS) {
+    month++
+
+    for (const debt of debts) {
+      const interest = debt.balance * (debt.interestRate / 100 / 12)
+      totalInterestPaid += interest
+      debt.balance += interest
+      debt.balance -= Math.min(debt.minimumPayment, debt.balance)
+    }
+
+    for (const debt of debts) {
+      if (debt.balance <= 0.01) payoffOrder.push(debt.name)
+    }
+    debts = debts.filter(debt => debt.balance > 0.01)
+  }
+
+  return { monthsToDebtFree: month, totalInterestPaid, payoffOrder, paidOff: debts.length === 0 }
+}
+
+// The first payment falls in the month after `start`, so the last of N payments lands N months after it.
+// Day 1 avoids Date rolling e.g. Jan 31 + 1 month into March.
+export function getDebtFreeDate(start: Date, monthsToDebtFree: number): Date {
+  return new Date(start.getFullYear(), start.getMonth() + monthsToDebtFree, 1)
 }

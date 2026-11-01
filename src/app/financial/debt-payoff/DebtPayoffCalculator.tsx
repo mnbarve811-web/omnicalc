@@ -1,11 +1,19 @@
 'use client'
 
-import { useState } from 'react'
 import { X } from 'lucide-react'
-import { useCalculatorUrl, type Schema } from '@/lib/hooks/use-calculator-url'
-import { calculateDebtPayoff, type DebtItem, type DebtPayoffStrategy } from '@/lib/engine/financial'
+import { listField, useCalculatorUrl, type Schema } from '@/lib/hooks/use-calculator-url'
+import {
+  calculateDebtPayoff,
+  calculateMinimumPaymentsOnly,
+  getDebtFreeDate,
+  type DebtItem,
+  type DebtPayoffResult,
+  type DebtPayoffStrategy,
+  type LumpSumPayment,
+} from '@/lib/engine/financial'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { Field } from '@/components/common/Field'
 import { CalculatorGrid, InputPanel, ResultPanel } from '@/components/common/CalculatorLayout'
@@ -13,61 +21,123 @@ import { ResultHero, ResultStat, ResultStats } from '@/components/common/Result'
 import { ResultActions } from '@/components/common/ResultActions'
 import { MobileResultBar } from '@/components/common/MobileResultBar'
 
-const SETTINGS_SCHEMA = {
-  strategy:            { param: 'strategy', default: 'avalanche' as DebtPayoffStrategy, parse: s => s as DebtPayoffStrategy, serialize: s => s },
-  extraMonthlyPayment: { param: 'extra',    default: 0, parse: Number, serialize: String },
-} as const satisfies Schema<{ strategy: DebtPayoffStrategy; extraMonthlyPayment: number }>
-
 const DEFAULT_DEBTS: DebtItem[] = [
   { name: 'Credit Card', balance: 5000, interestRate: 20, minimumPayment: 100 },
   { name: 'Car Loan', balance: 8000, interestRate: 6, minimumPayment: 200 },
 ]
 
+// A throw makes the hook fall back to the default list, so a hand-edited link cannot feed the engine bad values
+function parseNonNegative(part: string): number {
+  const n = Number(part)
+  if (!(n >= 0)) throw new Error('Expected a non-negative number')
+  return n
+}
+
+function parseMonth(part: string): number {
+  const n = Number(part)
+  if (!Number.isInteger(n) || n < 1) throw new Error('Expected a whole month of 1 or more')
+  return n
+}
+
+const SETTINGS_SCHEMA = {
+  strategy:            { param: 'strategy', default: 'avalanche' as DebtPayoffStrategy, parse: s => s as DebtPayoffStrategy, serialize: s => s },
+  extraMonthlyPayment: { param: 'extra',    default: 0, parse: Number, serialize: String },
+  debts: listField<DebtItem>(
+    'debts',
+    DEFAULT_DEBTS,
+    d => [d.name, d.balance, d.interestRate, d.minimumPayment],
+    ([name, balance, interestRate, minimumPayment]) => ({
+      name,
+      balance: parseNonNegative(balance),
+      interestRate: parseNonNegative(interestRate),
+      minimumPayment: parseNonNegative(minimumPayment),
+    }),
+  ),
+  lumpSums: listField<LumpSumPayment>(
+    'lump',
+    [],
+    l => [l.month, l.amount],
+    ([month, amount]) => ({ month: parseMonth(month), amount: parseNonNegative(amount) }),
+  ),
+} as const satisfies Schema<{ strategy: DebtPayoffStrategy; extraMonthlyPayment: number; debts: DebtItem[]; lumpSums: LumpSumPayment[] }>
+
 const fmt = (n: number) =>
   new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n)
+
+const monthYear = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' })
 
 const AXIS_TICK = { fill: 'var(--muted-foreground)', fontSize: 12 }
 
 export function DebtPayoffCalculator() {
   const [settings, setSettings] = useCalculatorUrl(SETTINGS_SCHEMA)
-  const [debts, setDebts] = useState<DebtItem[]>(DEFAULT_DEBTS)
+  const { debts, lumpSums } = settings
+  const today = new Date()
 
-  const snowball = calculateDebtPayoff({ debts, strategy: 'snowball', extraMonthlyPayment: settings.extraMonthlyPayment })
-  const avalanche = calculateDebtPayoff({ debts, strategy: 'avalanche', extraMonthlyPayment: settings.extraMonthlyPayment })
+  const plan = { debts, extraMonthlyPayment: settings.extraMonthlyPayment, lumpSums }
+  const snowball = calculateDebtPayoff({ ...plan, strategy: 'snowball' })
+  const avalanche = calculateDebtPayoff({ ...plan, strategy: 'avalanche' })
+  const minimumsOnly = calculateMinimumPaymentsOnly(debts)
   const selected = settings.strategy === 'snowball' ? snowball : avalanche
 
-  const comparisonData = [
-    { name: 'Snowball', months: snowball.monthsToDebtFree, interest: snowball.totalInterestPaid },
-    { name: 'Avalanche', months: avalanche.monthsToDebtFree, interest: avalanche.totalInterestPaid },
+  // Savings against a baseline that never finishes would be measured against an arbitrary 1200-month cutoff
+  function interestSaved(result: DebtPayoffResult): number | null {
+    if (!minimumsOnly.paidOff || !result.paidOff) return null
+    return minimumsOnly.totalInterestPaid - result.totalInterestPaid
+  }
+
+  function debtFreeDate(result: DebtPayoffResult): string {
+    return result.paidOff ? monthYear.format(getDebtFreeDate(today, result.monthsToDebtFree)) : 'Never'
+  }
+
+  const scenarios = [
+    { key: 'minimums', name: 'Minimum payments only', chartName: 'Minimums only', result: minimumsOnly },
+    { key: 'snowball', name: 'Snowball', chartName: 'Snowball', result: snowball },
+    { key: 'avalanche', name: 'Avalanche', chartName: 'Avalanche', result: avalanche },
   ]
+
+  const comparisonData = scenarios.map(({ chartName, result }) => ({ name: chartName, months: result.monthsToDebtFree, interest: result.totalInterestPaid }))
 
   const canExport = debts.length > 0 && debts.every(d => d.balance > 0 && d.minimumPayment > 0) && selected.paidOff
 
-  const csvRows = [
-    { strategy: 'Snowball', result: snowball },
-    { strategy: 'Avalanche', result: avalanche },
-  ].map(({ strategy, result }) => ({
-    Strategy: strategy,
-    Selected: strategy.toLowerCase() === settings.strategy ? 'Yes' : 'No',
-    'Months to Debt-Free': result.monthsToDebtFree,
+  const csvRows = scenarios.map(({ key, name, result }) => ({
+    Strategy: name,
+    Selected: key === settings.strategy ? 'Yes' : 'No',
+    'Months to Debt-Free': result.paidOff ? result.monthsToDebtFree : 'Never',
+    'Debt-Free Date': debtFreeDate(result),
     'Total Interest Paid': result.totalInterestPaid.toFixed(2),
+    'Interest Saved vs Minimums': key === 'minimums' ? '' : interestSaved(result)?.toFixed(2) ?? '',
     'Payoff Order': result.payoffOrder.join(' -> '),
   }))
 
   const monthsToDebtFree = selected.paidOff ? String(selected.monthsToDebtFree) : 'Never'
   const strategyName = settings.strategy === 'snowball' ? 'Snowball' : 'Avalanche'
+  const selectedSaved = interestSaved(selected)
 
-  function updateDebt(i: number, field: keyof DebtItem, value: string | number) {
+  function updateDebt(i: number, field: keyof DebtItem, value: string) {
     // Inputs hand back strings; numeric fields must be converted or the engine's `+=` concatenates text
-    setDebts(prev => prev.map((d, idx) => idx === i ? { ...d, [field]: field === 'name' ? value : Number(value) } : d))
+    const next = field === 'name' ? value : Math.max(0, Number(value))
+    setSettings({ debts: debts.map((d, idx) => idx === i ? { ...d, [field]: next } : d) })
   }
 
   function addDebt() {
-    setDebts(prev => [...prev, { name: `Debt ${prev.length + 1}`, balance: 1000, interestRate: 10, minimumPayment: 25 }])
+    setSettings({ debts: [...debts, { name: `Debt ${debts.length + 1}`, balance: 1000, interestRate: 10, minimumPayment: 25 }] })
   }
 
   function removeDebt(i: number) {
-    setDebts(prev => prev.filter((_, idx) => idx !== i))
+    setSettings({ debts: debts.filter((_, idx) => idx !== i) })
+  }
+
+  function updateLumpSum(i: number, field: keyof LumpSumPayment, value: string) {
+    const next = field === 'month' ? Math.max(1, Math.floor(Number(value))) : Math.max(0, Number(value))
+    setSettings({ lumpSums: lumpSums.map((l, idx) => idx === i ? { ...l, [field]: next } : l) })
+  }
+
+  function addLumpSum() {
+    setSettings({ lumpSums: [...lumpSums, { month: 12, amount: 1000 }] })
+  }
+
+  function removeLumpSum(i: number) {
+    setSettings({ lumpSums: lumpSums.filter((_, idx) => idx !== i) })
   }
 
   return (
@@ -84,9 +154,9 @@ export function DebtPayoffCalculator() {
                 </Button>
               </div>
               <div className="grid grid-cols-3 items-end gap-2">
-                <Field label="Balance ($)" type="number" value={debt.balance} onChange={e => updateDebt(i, 'balance', e.target.value)} />
-                <Field label="Rate (%)" type="number" value={debt.interestRate} onChange={e => updateDebt(i, 'interestRate', e.target.value)} />
-                <Field label="Min. Payment ($)" type="number" value={debt.minimumPayment} onChange={e => updateDebt(i, 'minimumPayment', e.target.value)} />
+                <Field label="Balance ($)" type="number" min={0} value={debt.balance} onChange={e => updateDebt(i, 'balance', e.target.value)} />
+                <Field label="Rate (%)" type="number" min={0} value={debt.interestRate} onChange={e => updateDebt(i, 'interestRate', e.target.value)} />
+                <Field label="Min. Payment ($)" type="number" min={0} value={debt.minimumPayment} onChange={e => updateDebt(i, 'minimumPayment', e.target.value)} />
               </div>
             </fieldset>
           ))}
@@ -122,6 +192,23 @@ export function DebtPayoffCalculator() {
           value={settings.extraMonthlyPayment}
           onChange={e => setSettings({ extraMonthlyPayment: Number(e.target.value) })}
         />
+
+        <fieldset className="space-y-3">
+          <legend className="mb-1.5 block text-sm font-medium text-foreground">One-Time Lump Sums</legend>
+          {lumpSums.map((lump, i) => (
+            <div key={i} role="group" aria-label={`Lump sum ${i + 1}`} className="flex items-end gap-2">
+              <Field label="Month" type="number" min={1} step={1} className="min-w-0 flex-1" value={lump.month} onChange={e => updateLumpSum(i, 'month', e.target.value)} />
+              <Field label="Amount" prefix="$" type="number" min={0} className="min-w-0 flex-1" value={lump.amount} onChange={e => updateLumpSum(i, 'amount', e.target.value)} />
+              <Button type="button" variant="ghost" size="icon" aria-label={`Remove lump sum ${i + 1}`} onClick={() => removeLumpSum(i)}>
+                <X aria-hidden />
+              </Button>
+            </div>
+          ))}
+          <p className="text-xs text-muted-foreground">
+            Month 1 is your next payment. A lump sum goes to your debts in strategy order, on top of that month&apos;s budget.
+          </p>
+          <Button type="button" variant="outline" size="sm" className="w-full" onClick={addLumpSum}>+ Add Lump Sum</Button>
+        </fieldset>
       </InputPanel>
 
       <ResultPanel id="debt-payoff-results">
@@ -134,7 +221,9 @@ export function DebtPayoffCalculator() {
         <ResultHero label="Months to Debt-Free" value={monthsToDebtFree} caption={`Using the ${strategyName} strategy`} />
 
         <ResultStats>
+          <ResultStat label="Debt-Free Date" value={debtFreeDate(selected)} />
           <ResultStat label="Total Interest Paid" value={fmt(selected.totalInterestPaid)} />
+          <ResultStat label="Interest Saved vs Minimums" value={selectedSaved === null ? '—' : fmt(selectedSaved)} />
           <ResultStat label="Payoff Order" value={selected.payoffOrder.join(' -> ')} />
         </ResultStats>
 
@@ -147,7 +236,35 @@ export function DebtPayoffCalculator() {
 
         <Card>
           <CardHeader><CardTitle>Strategy Comparison</CardTitle></CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Scenario</TableHead>
+                  <TableHead>Months</TableHead>
+                  <TableHead>Debt-Free Date</TableHead>
+                  <TableHead>Total Interest</TableHead>
+                  <TableHead>Interest Saved</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {scenarios.map(({ key, name, result }) => {
+                  const saved = interestSaved(result)
+                  return (
+                    <TableRow key={key} data-state={key === settings.strategy ? 'selected' : undefined}>
+                      <TableCell>{name}</TableCell>
+                      <TableCell>{result.paidOff ? result.monthsToDebtFree : 'Never'}</TableCell>
+                      <TableCell>{debtFreeDate(result)}</TableCell>
+                      <TableCell>{fmt(result.totalInterestPaid)}</TableCell>
+                      <TableCell>{key === 'minimums' || saved === null ? '—' : fmt(saved)}</TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
+            <p className="text-xs text-muted-foreground">
+              Minimum payments only pays each debt just its own minimum, with no extra payment or lump sums, and a paid-off debt&apos;s minimum is not moved to the others.
+            </p>
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={comparisonData} margin={{ top: 4, right: 0, left: 0, bottom: 4 }}>
                 <CartesianGrid stroke="var(--border)" vertical={false} />
