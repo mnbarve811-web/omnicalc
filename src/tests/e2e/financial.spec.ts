@@ -210,10 +210,72 @@ test.describe('Financial calculators', () => {
 
     test('exports CSV and PDF, and disables export when there is no loan', async ({ page }) => {
       await page.goto('/financial/mortgage')
-      await expectCsvDownload(page, 'Month,Payment,Principal,Interest,Balance', 360)
+      await expectCsvDownload(page, 'Month,Payment,Extra,Principal,Interest,Balance', 360)
       await expectPdfDownload(page)
       await setField(page, 'Down Payment', '400000', 'down')
       await expectExportDisabled(page)
+    })
+
+    test('an extra monthly payment from the URL shows payoff time and savings', async ({ page }) => {
+      await page.goto('/financial/mortgage?extra=500')
+      await expect(field(page, 'Extra Monthly Payment')).toHaveValue('500')
+      const baseline = calculateMortgage(MORTGAGE_DEFAULTS)
+      const withExtra = calculateMortgage({ ...MORTGAGE_DEFAULTS, extraMonthlyPayment: 500 })
+      expect(withExtra.amortizationSchedule).toHaveLength(213)
+      await expect(cardValue(page, 'Payoff Time')).toHaveText('17 yr 9 mo')
+      await expect(cardValue(page, 'Time Saved')).toHaveText('12 yr 3 mo')
+      await expect(cardValue(page, 'Total Interest')).toHaveText(usd.format(withExtra.totalInterestPaid))
+      await expect(cardValue(page, 'Interest Saved')).toHaveText(usd.format(baseline.totalInterestPaid - withExtra.totalInterestPaid))
+    })
+
+    test('lump sums can be added and removed and are stored in the URL', async ({ page }) => {
+      await page.goto('/financial/mortgage')
+      await page.getByRole('button', { name: 'Advanced options: extra payments' }).click()
+      await page.getByRole('button', { name: '+ Add Lump Sum' }).click()
+      await expect(page).toHaveURL(/[?&]lump=12~5000(&|$)/)
+      const row = page.getByRole('group', { name: 'Lump sum 1' })
+      await row.locator('input').nth(1).fill('20000')
+      await expect(page).toHaveURL(/[?&]lump=12~20000(&|$)/)
+      const expected = calculateMortgage({ ...MORTGAGE_DEFAULTS, lumpSums: [{ month: 12, amount: 20000 }] })
+      await expect(cardValue(page, 'Total Interest')).toHaveText(usd.format(expected.totalInterestPaid))
+      await page.getByRole('button', { name: 'Remove lump sum 1' }).click()
+      await expect(page).not.toHaveURL(/lump=/)
+    })
+
+    test('a lump sum month outside the term shows an error and is ignored', async ({ page }) => {
+      await page.goto('/financial/mortgage?lump=999~5000')
+      await expect(page.getByText('Enter a whole month from 1 to 360', { exact: true })).toBeVisible()
+      const baseline = calculateMortgage(MORTGAGE_DEFAULTS)
+      await expect(cardValue(page, 'Total Interest')).toHaveText(usd.format(baseline.totalInterestPaid))
+    })
+
+    test('biweekly payments shorten the loan and are stored in the URL', async ({ page }) => {
+      await page.goto('/financial/mortgage')
+      await page.getByRole('button', { name: 'Advanced options: extra payments' }).click()
+      await page.getByRole('button', { name: 'Biweekly', exact: true }).click()
+      await expect(page).toHaveURL(/[?&]bw=1(&|$)/)
+      const expected = calculateMortgage({ ...MORTGAGE_DEFAULTS, biweekly: true })
+      await expect(cardValue(page, 'Payoff Time')).toHaveText('23 yr 9 mo')
+      await expect(cardValue(page, 'Biweekly P&I')).toHaveText(usd.format(expected.monthlyPrincipalAndInterest / 2))
+      await expect(cardValue(page, 'Total Interest')).toHaveText(usd.format(expected.totalInterestPaid))
+    })
+
+    test('the down payment slider edits the dollar down payment', async ({ page }) => {
+      await page.goto('/financial/mortgage')
+      const slider = page.getByRole('slider', { name: 'Down Payment (%)' })
+      await slider.focus()
+      await slider.press('ArrowRight')
+      await expect(page).toHaveURL(/[?&]down=84000(&|$)/)
+      await expect(field(page, 'Down Payment')).toHaveValue('84000')
+    })
+
+    test('the term comparison table lists each term at the current inputs', async ({ page }) => {
+      await page.goto('/financial/mortgage')
+      const fifteen = calculateMortgage({ ...MORTGAGE_DEFAULTS, loanTermYears: 15 })
+      const row = page.getByRole('row').filter({ has: page.getByRole('cell', { name: '15 years', exact: true }) })
+      await expect(row.getByRole('cell').nth(1)).toHaveText(usd.format(fifteen.monthlyPrincipalAndInterest))
+      await expect(row.getByRole('cell').nth(2)).toHaveText(usd.format(fifteen.totalInterestPaid))
+      await expect(row.getByRole('cell').nth(3)).toHaveText('15 yr')
     })
   })
 
