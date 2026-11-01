@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { calculateDebtPayoff } from '@/lib/engine'
+import { calculateDebtPayoff, calculateMinimumPaymentsOnly, getDebtFreeDate } from '@/lib/engine'
 
 const DEBTS = [
   { name: 'Credit Card', balance: 5000, interestRate: 20, minimumPayment: 100 },
@@ -142,5 +142,125 @@ describe('calculateDebtPayoff edge cases', () => {
       extraMonthlyPayment: 0,
     })
     expect(r.paidOff).toBe(true)
+  })
+})
+
+describe('calculateDebtPayoff lump sums', () => {
+  it('a lump sum is paid on top of the budget in its month', () => {
+    // 1000 left after month 2; month 3 pays 100 + 500, leaving 400 for four more months
+    const r = calculateDebtPayoff({
+      debts: [{ name: 'A', balance: 1200, interestRate: 0, minimumPayment: 100 }],
+      strategy: 'avalanche',
+      extraMonthlyPayment: 0,
+      lumpSums: [{ month: 3, amount: 500 }],
+    })
+    expect(r.monthsToDebtFree).toBe(7)
+  })
+
+  it('a lump sum follows strategy order and spills into the next debt', () => {
+    // Month 1: A grows to 1010 and is cleared by 200 + 1000; the 190 left reduces B to 810, then 200 a month
+    const r = calculateDebtPayoff({
+      debts: [
+        { name: 'A', balance: 1000, interestRate: 12, minimumPayment: 100 },
+        { name: 'B', balance: 1000, interestRate: 0, minimumPayment: 100 },
+      ],
+      strategy: 'avalanche',
+      extraMonthlyPayment: 0,
+      lumpSums: [{ month: 1, amount: 1000 }],
+    })
+    expect(r.payoffOrder).toEqual(['A', 'B'])
+    expect(r.monthsToDebtFree).toBe(6)
+    expect(r.totalInterestPaid).toBeCloseTo(10, 10)
+  })
+
+  it('lump sums in the same month add up', () => {
+    // Month 2 pays 100 + 600, leaving 200
+    const r = calculateDebtPayoff({
+      debts: [{ name: 'A', balance: 1000, interestRate: 0, minimumPayment: 100 }],
+      strategy: 'snowball',
+      extraMonthlyPayment: 0,
+      lumpSums: [{ month: 2, amount: 300 }, { month: 2, amount: 300 }],
+    })
+    expect(r.monthsToDebtFree).toBe(4)
+  })
+
+  it('a lump sum after the debts are paid off changes nothing', () => {
+    const debts = [{ name: 'A', balance: 1000, interestRate: 10, minimumPayment: 500 }]
+    const without = calculateDebtPayoff({ debts, strategy: 'avalanche', extraMonthlyPayment: 0 })
+    const late = calculateDebtPayoff({ debts, strategy: 'avalanche', extraMonthlyPayment: 0, lumpSums: [{ month: 5, amount: 1000 }] })
+    expect(late).toEqual(without)
+  })
+
+  it('an empty lump-sum list matches no lump sums', () => {
+    const without = calculateDebtPayoff({ debts: DEBTS, strategy: 'snowball', extraMonthlyPayment: 50 })
+    const empty = calculateDebtPayoff({ debts: DEBTS, strategy: 'snowball', extraMonthlyPayment: 50, lumpSums: [] })
+    expect(empty).toEqual(without)
+  })
+})
+
+describe('calculateMinimumPaymentsOnly', () => {
+  it('freed minimums are not rolled over to the remaining debts', () => {
+    const debts = [
+      { name: 'A', balance: 400, interestRate: 0, minimumPayment: 100 },
+      { name: 'B', balance: 600, interestRate: 0, minimumPayment: 100 },
+    ]
+    const r = calculateMinimumPaymentsOnly(debts)
+    // Snowball with rollover takes 5 months for the same debts
+    expect(r.monthsToDebtFree).toBe(6)
+    expect(r.payoffOrder).toEqual(['A', 'B'])
+    expect(r.totalInterestPaid).toBe(0)
+    expect(r.paidOff).toBe(true)
+  })
+
+  it('charges interest on each balance before its minimum is paid', () => {
+    // 1000 -> 1010 - 500 = 510 -> 515.10 - 500 = 15.10 -> 15.251 paid off; interest 10 + 5.10 + 0.151
+    const r = calculateMinimumPaymentsOnly([{ name: 'A', balance: 1000, interestRate: 12, minimumPayment: 500 }])
+    expect(r.monthsToDebtFree).toBe(3)
+    expect(r.totalInterestPaid).toBeCloseTo(15.251, 10)
+  })
+
+  it('costs at least as much interest as either strategy', () => {
+    const baseline = calculateMinimumPaymentsOnly(DEBTS)
+    const avalanche = calculateDebtPayoff({ debts: DEBTS, strategy: 'avalanche', extraMonthlyPayment: 0 })
+    expect(baseline.monthsToDebtFree).toBeGreaterThan(avalanche.monthsToDebtFree)
+    expect(baseline.totalInterestPaid).toBeGreaterThan(avalanche.totalInterestPaid)
+  })
+
+  it('reports never paid off at the 1200-month cap when a minimum does not cover interest', () => {
+    const r = calculateMinimumPaymentsOnly([{ name: 'A', balance: 10000, interestRate: 24, minimumPayment: 100 }])
+    expect(r.monthsToDebtFree).toBe(1200)
+    expect(r.paidOff).toBe(false)
+  })
+
+  it('no debts are paid off in zero months', () => {
+    expect(calculateMinimumPaymentsOnly([])).toEqual({ monthsToDebtFree: 0, totalInterestPaid: 0, payoffOrder: [], paidOff: true })
+  })
+
+  it('does not mutate the input debts', () => {
+    const debts = DEBTS.map(d => ({ ...d }))
+    calculateMinimumPaymentsOnly(debts)
+    expect(debts).toEqual(DEBTS)
+  })
+})
+
+describe('getDebtFreeDate', () => {
+  it('adds the months to the start month', () => {
+    const d = getDebtFreeDate(new Date(2026, 9, 15), 52)
+    expect([d.getFullYear(), d.getMonth()]).toEqual([2031, 1])
+  })
+
+  it('rolls over the year', () => {
+    const d = getDebtFreeDate(new Date(2026, 10, 1), 3)
+    expect([d.getFullYear(), d.getMonth()]).toEqual([2027, 1])
+  })
+
+  it('does not skip a short month when starting at the end of a long one', () => {
+    const d = getDebtFreeDate(new Date(2027, 0, 31), 1)
+    expect([d.getFullYear(), d.getMonth()]).toEqual([2027, 1])
+  })
+
+  it('zero months is the start month', () => {
+    const d = getDebtFreeDate(new Date(2026, 9, 31), 0)
+    expect([d.getFullYear(), d.getMonth()]).toEqual([2026, 9])
   })
 })
