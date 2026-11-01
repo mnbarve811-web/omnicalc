@@ -47,6 +47,15 @@ describe('useCalculatorUrl', () => {
     expect(mockReplace).toHaveBeenLastCalledWith('/financial/mortgage?price=400000&rate=7', { scroll: false })
   })
 
+  it('passes the latest pending values to an updater called again before the URL updates', () => {
+    const { result } = renderHook(() => useCalculatorUrl(SCHEMA))
+    act(() => {
+      result.current[1]((current) => ({ price: current.price + 1000 }))
+      result.current[1]((current) => ({ price: current.price + 1000 }))
+    })
+    expect(mockReplace).toHaveBeenLastCalledWith('/financial/mortgage?price=302000', { scroll: false })
+  })
+
   it('falls back to default when Number() returns NaN', () => {
     mockGet.mockReturnValue('not-a-number')
     const { result } = renderHook(() => useCalculatorUrl(SCHEMA))

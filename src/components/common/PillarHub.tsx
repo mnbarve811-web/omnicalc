@@ -16,12 +16,12 @@ export function PillarHub({ pillarId }: { pillarId: Pillar['id'] }) {
       </h1>
       <p className="mt-2 max-w-[65ch] text-base text-muted-foreground md:text-lg">{pillar.description}</p>
 
-      <ul className="mt-10 grid grid-cols-1 gap-3 md:grid-cols-2">
+      <ul className="mt-10 grid grid-cols-1 gap-x-12 border-t border-border md:grid-cols-2 md:border-t-0">
         {pillar.calculators.map((calculator) => (
-          <li key={calculator.href}>
+          <li key={calculator.href} className="border-b border-border md:[&:nth-child(-n+2)]:border-t">
             <Link
               href={calculator.href}
-              className="group flex h-full items-start justify-between gap-6 rounded-lg border border-border bg-card p-5 shadow-[0_1px_2px_rgba(20,27,45,0.04)] transition-colors duration-150 hover:border-primary/40 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/30 md:p-6"
+              className="group flex h-full items-start justify-between gap-6 rounded-sm py-5 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/30"
             >
               <span>
                 <span className="block text-lg font-semibold tracking-[-0.01em] text-foreground group-hover:text-primary">

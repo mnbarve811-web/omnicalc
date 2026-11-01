@@ -18,6 +18,7 @@ import { CalculatorGrid, InputPanel, ResultPanel } from '@/components/common/Cal
 import { ProportionBar, ResultHero, ResultStat, ResultStats, type ProportionSegment } from '@/components/common/Result'
 import { ResultActions } from '@/components/common/ResultActions'
 import { MobileResultBar } from '@/components/common/MobileResultBar'
+import { niceTicks } from '@/lib/format'
 
 // Unknown URL values throw so the hook falls back to the default instead of feeding the engine an invalid key
 function parseGender(s: string): GenderBiological {
@@ -55,10 +56,11 @@ export function TDEECalculator() {
   const result = calculateTDEE(values)
 
   const chartData = [
-    { name: 'Cut',      calories: Math.round(result.cut),      fill: 'var(--chart-2)' },
+    { name: 'Cut',      calories: Math.round(result.cut),      fill: 'var(--chart-4)' },
     { name: 'Maintain', calories: Math.round(result.maintain), fill: 'var(--chart-1)' },
-    { name: 'Bulk',     calories: Math.round(result.bulk),     fill: 'var(--chart-3)' },
+    { name: 'Bulk',     calories: Math.round(result.bulk),     fill: 'var(--chart-1-tint)' },
   ]
+  const xTicks = niceTicks(Math.max(0, ...chartData.map((entry) => entry.calories)))
 
   const canExport = values.weightKg > 0 && values.heightCm > 0 && values.ageYears > 0
 
@@ -66,7 +68,7 @@ export function TDEECalculator() {
   const activityCalories = Math.round(result.maintain) - restingCalories
   const breakdown: ProportionSegment[] = [
     { label: 'Resting (BMR)', value: restingCalories, display: `${restingCalories.toLocaleString()} cal`, colorClass: 'bg-chart-1' },
-    { label: 'Activity', value: activityCalories, display: `${activityCalories.toLocaleString()} cal`, colorClass: 'bg-chart-1/40' },
+    { label: 'Activity', value: activityCalories, display: `${activityCalories.toLocaleString()} cal`, colorClass: 'bg-chart-1-tint' },
   ]
 
   return (
@@ -157,7 +159,7 @@ export function TDEECalculator() {
             <ResponsiveContainer width="100%" height={240}>
               <BarChart data={chartData} layout="vertical" margin={{ top: 4, right: 16, left: 16, bottom: 4 }}>
                 <CartesianGrid stroke="var(--border)" horizontal={false} />
-                <XAxis type="number" tickFormatter={(v: number) => `${(v / 1000).toFixed(1)}k`} tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }} tickLine={false} axisLine={false} />
+                <XAxis type="number" ticks={xTicks} domain={[0, xTicks[xTicks.length - 1]]} tickFormatter={(v: number) => v.toLocaleString('en-US')} tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }} tickLine={false} axisLine={false} />
                 <YAxis type="category" dataKey="name" width={72} tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }} tickLine={false} axisLine={false} />
                 <Tooltip
                   formatter={(v) => typeof v === 'number' ? `${Math.round(v).toLocaleString()} cal` : String(v)}

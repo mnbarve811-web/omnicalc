@@ -48,16 +48,31 @@ export function ResultStats({ children }: { children: React.ReactNode }) {
   )
 }
 
-export function ResultStat({ label, value }: { label: string; value: string }) {
+// swatchClass ties a figure to its chart series, e.g. amber for interest so a cost reads as a cost
+export function ResultStat({ label, value, swatchClass }: { label: string; value: string; swatchClass?: string }) {
   return (
     <div data-slot="card">
-      <dt data-slot="card-title" className="text-xs font-medium text-muted-foreground">
+      <dt data-slot="card-title" className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+        {swatchClass && <span aria-hidden className={`h-2 w-2 shrink-0 rounded-[2px] ${swatchClass}`} />}
         {label}
       </dt>
       <dd data-slot="card-content" className="mt-0.5 text-lg font-semibold tracking-[-0.01em] tabular-nums text-foreground">
         {value}
       </dd>
     </div>
+  )
+}
+
+export function ChartLegend({ items }: { items: { label: string; colorClass: string }[] }) {
+  return (
+    <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5 text-sm text-muted-foreground">
+      {items.map((item) => (
+        <li key={item.label} className="flex items-center gap-2">
+          <span aria-hidden className={`h-2.5 w-2.5 shrink-0 rounded-[3px] ${item.colorClass}`} />
+          {item.label}
+        </li>
+      ))}
+    </ul>
   )
 }
 

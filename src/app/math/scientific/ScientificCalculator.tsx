@@ -69,9 +69,9 @@ export function ScientificCalculator() {
   }
 
   function pressKey(key: KeypadKey) {
-    if ('insert' in key) { setValues({ expression: values.expression + key.insert }); return }
+    if ('insert' in key) { setValues(current => ({ expression: current.expression + key.insert })); return }
     if (key.action === 'clear') { setValues({ expression: '' }); return }
-    if (key.action === 'backspace') { setValues({ expression: values.expression.trimEnd().slice(0, -1).trimEnd() }); return }
+    if (key.action === 'backspace') { setValues(current => ({ expression: current.expression.trimEnd().slice(0, -1).trimEnd() })); return }
     commitResult()
   }
 

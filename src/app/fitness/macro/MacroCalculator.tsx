@@ -41,8 +41,8 @@ const SCHEMA = {
   split: { param: 'split', default: 'balanced', parse: parseSplit, serialize: (v: MacroSplit) => v },
 } as const satisfies Schema<MacroInputs>
 
-const PIE_COLORS = ['var(--chart-1)', 'var(--chart-3)', 'var(--chart-2)']
-const BAR_COLORS = ['bg-chart-1', 'bg-chart-3', 'bg-chart-2']
+const PIE_COLORS = ['var(--chart-1)', 'var(--chart-1-tint)', 'var(--chart-4)']
+const BAR_COLORS = ['bg-chart-1', 'bg-chart-1-tint', 'bg-chart-4']
 const SEGMENT_LABELS = ['From protein', 'From carbs', 'From fat']
 
 export function MacroCalculator() {

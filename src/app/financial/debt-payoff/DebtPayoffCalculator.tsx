@@ -11,13 +11,14 @@ import {
   type DebtPayoffStrategy,
   type LumpSumPayment,
 } from '@/lib/engine/financial'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { formatCompactUsd } from '@/lib/format'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { Field } from '@/components/common/Field'
 import { CalculatorGrid, InputPanel, ResultPanel } from '@/components/common/CalculatorLayout'
-import { ResultHero, ResultStat, ResultStats } from '@/components/common/Result'
+import { ChartLegend, ResultHero, ResultStat, ResultStats } from '@/components/common/Result'
 import { ResultActions } from '@/components/common/ResultActions'
 import { MobileResultBar } from '@/components/common/MobileResultBar'
 
@@ -222,7 +223,7 @@ export function DebtPayoffCalculator() {
 
         <ResultStats>
           <ResultStat label="Debt-Free Date" value={debtFreeDate(selected)} />
-          <ResultStat label="Total Interest Paid" value={fmt(selected.totalInterestPaid)} />
+          <ResultStat label="Total Interest Paid" value={fmt(selected.totalInterestPaid)} swatchClass="bg-chart-2" />
           <ResultStat label="Interest Saved vs Minimums" value={selectedSaved === null ? '—' : fmt(selectedSaved)} />
           <ResultStat label="Payoff Order" value={selected.payoffOrder.join(' -> ')} />
         </ResultStats>
@@ -269,18 +270,18 @@ export function DebtPayoffCalculator() {
               <BarChart data={comparisonData} margin={{ top: 4, right: 0, left: 0, bottom: 4 }}>
                 <CartesianGrid stroke="var(--border)" vertical={false} />
                 <XAxis dataKey="name" tick={AXIS_TICK} tickLine={false} axisLine={false} />
-                <YAxis yAxisId="left" tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} tick={AXIS_TICK} tickLine={false} axisLine={false} />
+                <YAxis yAxisId="left" tickFormatter={formatCompactUsd} tick={AXIS_TICK} tickLine={false} axisLine={false} />
                 <YAxis yAxisId="right" orientation="right" tick={AXIS_TICK} tickLine={false} axisLine={false} />
                 <Tooltip
-                  formatter={(v: number, name: string) => name === 'interest' ? fmt(v) : `${v} months`}
+                  formatter={(v: number, name: string) => name === 'Total Interest' ? fmt(v) : `${v} months`}
                   cursor={{ fill: 'var(--muted)' }}
                   contentStyle={{ borderRadius: 8, border: '1px solid var(--border)', fontSize: 13 }}
                 />
-                <Legend wrapperStyle={{ fontSize: 13 }} />
                 <Bar yAxisId="left" dataKey="interest" name="Total Interest" fill="var(--chart-2)" radius={[4, 4, 0, 0]} />
                 <Bar yAxisId="right" dataKey="months" name="Months" fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
+            <ChartLegend items={[{ label: 'Total Interest', colorClass: 'bg-chart-2' }, { label: 'Months', colorClass: 'bg-chart-1' }]} />
           </CardContent>
         </Card>
       </ResultPanel>

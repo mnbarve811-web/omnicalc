@@ -8,6 +8,9 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  --color-chart-1-tint: var(--chart-1-tint);
+  --color-chart-2-tint: var(--chart-2-tint);
+  --color-chart-4-tint: var(--chart-4-tint);
   --color-pillar-financial: var(--pillar-financial);
   --color-pillar-fitness: var(--pillar-fitness);
   --color-pillar-math: var(--pillar-math);
@@ -77,6 +80,10 @@
   --chart-3: #0f8a6a;
   --chart-4: #6b7a99;
   --chart-5: #d23d5e;
+  /* Opaque tints for chart fills: translucent series drifted to lavender and tan over white */
+  --chart-1-tint: #93a3e4;
+  --chart-2-tint: #dcb37f;
+  --chart-4-tint: #b5bdcc;
   --pillar-financial: #0f8a6a;
   --pillar-fitness: #d23d5e;
   --pillar-math: #4f46e5;
@@ -135,6 +142,7 @@
   }
   html {
     @apply font-sans;
+    scrollbar-color: var(--chart-4-tint) transparent;
   }
   ::selection {
     background-color: color-mix(in srgb, var(--primary) 22%, transparent);
@@ -155,7 +163,7 @@
 
 @media (prefers-reduced-motion: no-preference) {
   .omni-flash {
-    animation: omni-flash 600ms cubic-bezier(0.16, 1, 0.3, 1);
+    animation: omni-flash 200ms cubic-bezier(0.16, 1, 0.3, 1);
   }
 }
 

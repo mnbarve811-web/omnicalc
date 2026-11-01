@@ -239,13 +239,23 @@ test.describe('Date Calculator', () => {
   test('renders heading, default result, guide, FAQ and structured data', async ({ page }) => {
     await page.goto('/utility/date-diff')
     await expect(page.getByRole('heading', { level: 1, name: 'Date Calculator' })).toBeVisible()
+    // The default dates come from the visitor's clock, so they appear once the page has hydrated
+    await expect(startInput(page)).toHaveValue(/^\d{4}-\d{2}-\d{2}$/)
+    await expect(endInput(page)).toHaveValue(/^\d{4}-\d{2}-\d{2}$/)
     const startDate = await startInput(page).inputValue()
     const endDate = await endInput(page).inputValue()
-    expect(startDate).toMatch(/^\d{4}-\d{2}-\d{2}$/)
-    expect(endDate).toMatch(/^\d{4}-\d{2}-\d{2}$/)
     const expected = await expectBreakdown(page, startDate, endDate)
     expect(expected.years).toBe(1)
     await expectSeoBasics(page, '/utility/date-diff', dateContent)
+  })
+
+  test('default dates follow the visitor clock without a hydration mismatch', async ({ page }) => {
+    // A late-evening local time whose UTC date is already the next day, on a date the server is not on
+    await page.clock.setFixedTime(new Date('2026-06-15T22:30:00'))
+    await page.goto('/utility/date-diff')
+    await expect(endInput(page)).toHaveValue('2026-06-15')
+    await expect(startInput(page)).toHaveValue('2025-06-15')
+    await expectBreakdown(page, '2025-06-15', '2026-06-15')
   })
 
   test('first of one month to the first of the next is exactly 1 month', async ({ page }) => {

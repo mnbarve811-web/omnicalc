@@ -2,6 +2,7 @@
 
 import { useCalculatorUrl, type Schema } from '@/lib/hooks/use-calculator-url'
 import { calculateRetirement, type RetirementInputs } from '@/lib/engine/financial'
+import { formatCompactUsd } from '@/lib/format'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
@@ -171,7 +172,7 @@ export function RetirementCalculator() {
               <LineChart data={allPoints} margin={{ top: 16, right: 16, left: 16, bottom: 4 }}>
                 <CartesianGrid stroke="var(--border)" vertical={false} />
                 <XAxis dataKey="age" tickFormatter={(v: number) => `Age ${v}`} tick={AXIS_TICK} tickLine={false} axisLine={false} />
-                <YAxis tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} tick={AXIS_TICK} tickLine={false} axisLine={false} />
+                <YAxis tickFormatter={formatCompactUsd} tick={AXIS_TICK} tickLine={false} axisLine={false} />
                 <Tooltip
                   formatter={(v: number) => fmt(v)}
                   labelFormatter={l => `Age ${l}`}
